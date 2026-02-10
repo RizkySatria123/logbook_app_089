@@ -32,6 +32,7 @@ Aplikasi ditambahkan fitur "Riwayat" sederhana untuk mencatat aktivitas pengguna
 
 ## Screenshot
 ### Task 1: Multi-Step Counter
-![img.png](img.png)
+![Task 1](assets/task1.png)
 
-### Task 2: The History Logger 
+### Task 2: The History Logger
+![Task 2](assets/task2.png)
