@@ -36,3 +36,7 @@ Aplikasi ditambahkan fitur "Riwayat" sederhana untuk mencatat aktivitas pengguna
 
 ### Task 2: The History Logger
 ![Task 2](IMG2.png)
+
+## Self Reflection
+Prinsip SRP membuat logika counter dan pencatatan riwayat terpisah di `CounterController`, sehingga penambahan fitur History Logger hanya menyentuh satu area tanggung jawab tanpa mengubah UI atau logika lainnya.
+
