@@ -51,10 +51,17 @@ class _CounterViewState extends State<CounterView> {
                       itemCount: history.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (_, index) {
+                        final entry = history[index];
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
                           dense: true,
-                          title: Text(history[index]),
+                          title: Text(
+                            entry.label,
+                            style: TextStyle(
+                              color: colorFor(entry.action),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         );
                       },
                     ),
@@ -69,11 +76,7 @@ class _CounterViewState extends State<CounterView> {
         children: [
           FloatingActionButton(
             heroTag: 'reset',
-            onPressed: () {
-              setState(() {
-                _controller.reset();
-              });
-            },
+            onPressed: _confirmReset,
             tooltip: 'Reset',
             backgroundColor: Colors.orange,
             shape: const CircleBorder(),
@@ -109,4 +112,38 @@ class _CounterViewState extends State<CounterView> {
       ),
     );
   }
+
+  Future<void> _confirmReset() async {
+    final shouldReset = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Konfirmasi Reset'),
+        content: const Text('Yakin Ingin diReset?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (shouldReset == true) {
+      setState(() {
+        _controller.reset();
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(' Udah direset')));
+    }
+  }
+
+  Color colorFor(HistoryAction action) => {
+    HistoryAction.tambah: Colors.green,
+    HistoryAction.kurang: Colors.red,
+    HistoryAction.reset: Colors.blue,
+  }[action]!;
 }
