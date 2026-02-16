@@ -1,5 +1,7 @@
+// main.dart
 import 'package:flutter/material.dart';
-import 'counter_view.dart';
+// Sesuaikan path import dengan struktur folder baru
+import 'package:logbook_app_089/features/onboarding/onboarding_view.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,12 +13,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'LogBook App',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
       ),
-      home: const CounterView(),
+      home: const OnboardingView(),
     );
   }
 }
@@ -50,9 +52,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text(
-              'Ditekan :',
-            ),
+            const Text('Ditekan :'),
             Text(
               '$_counter',
               style: Theme.of(context).textTheme.headlineMedium,
