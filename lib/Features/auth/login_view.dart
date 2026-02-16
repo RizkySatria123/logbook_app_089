@@ -1,9 +1,9 @@
 // login_view.dart
 import 'package:flutter/material.dart';
 // Import Controller milik sendiri (masih satu folder)
-import 'package:features/auth/login_controller.dart';
+import 'package:logbook_app_089/Features/auth/login_controller.dart';
 // Import View dari fitur lain (Logbook) untuk navigasi
-import 'package:features/logbook/counter_view.dart';
+import 'package:logbook_app_089/Features/logbook/counter_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});

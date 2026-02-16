@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'counter_controller.dart';
 
 class CounterView extends StatefulWidget {
-  const CounterView({super.key});
+  final String username;
+  const CounterView({super.key, required this.username});
   @override
   State<CounterView> createState() => _CounterViewState();
 }
@@ -14,7 +15,7 @@ class _CounterViewState extends State<CounterView> {
   Widget build(BuildContext context) {
     final history = _controller.history.reversed.toList();
     return Scaffold(
-      appBar: AppBar(title: const Text("LogBook_App_089 - Task 1")),
+      appBar: AppBar(title: Text("LogBook_App_089 - ${widget.username}")),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(

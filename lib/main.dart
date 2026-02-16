@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'Features/logbook/counter_view.dart';
+import 'Features/auth/login_view.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const CounterView(),
+      home: const LoginView(),
     );
   }
 }
