@@ -1,18 +1,9 @@
 import 'package:flutter/material.dart';
-import 'counter_controller.dart';
-
-// PENTING: Ganti 'logbook_app' dengan nama project kamu yang ada di pubspec.yaml
-// atau sesuaikan path-nya ke file onboarding_view.dart kamu.
-// import 'package:logbook_app/features/onboarding/onboarding_view.dart';
-
-// Jika kamu menggunakan Relative Path (folder features/logbook dan features/onboarding sejajar):
-import '../onboarding/onboarding_view.dart';
+import 'package:logbook_app_089/features/logbook/counter_controller.dart';
+import 'package:logbook_app_089/features/onboarding/onboarding_view.dart';
 
 class CounterView extends StatefulWidget {
-  // 1. UPDATE: Menambahkan variabel username agar bisa menerima data dari Login
   final String username;
-
-  // 2. UPDATE: Wajibkan (required) username di constructor
   const CounterView({super.key, required this.username});
 
   @override
@@ -23,20 +14,26 @@ class _CounterViewState extends State<CounterView> {
   final CounterController _controller = CounterController();
 
   @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    await _controller.loadData();
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Ambil history
     final history = _controller.history.reversed.toList();
 
     return Scaffold(
       appBar: AppBar(
-        // 3. UPDATE: Menampilkan Nama User di Judul
         title: Text("Logbook: ${widget.username}"),
-
-        // 4. UPDATE: Menambahkan Tombol Logout di Kanan Atas
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout, // Memanggil fungsi logout di bawah
-          ),
+          IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout),
         ],
       ),
       body: Padding(
@@ -47,7 +44,7 @@ class _CounterViewState extends State<CounterView> {
             TextField(
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
-                labelText: "Masukkan Nilai Step yang anda suka",
+                labelText: "Masukkan Nilai Step",
                 border: OutlineInputBorder(),
                 hintText: "Contoh: 6 atau 7",
               ),
@@ -58,19 +55,18 @@ class _CounterViewState extends State<CounterView> {
             ),
             const SizedBox(height: 20),
 
-            const Text("Total :"),
+            const Text("Total Hitungan:"),
             Text(
               '${_controller.value}',
               style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
 
-            const Text("Riwayat Terakhir"),
+            const Text("Riwayat Aktivitas (Tersimpan)"),
             const SizedBox(height: 10),
-            SizedBox(
-              height: 200,
+            Expanded(
               child: history.isEmpty
-                  ? const Center(child: Text("Belum ada aktivitas"))
+                  ? const Center(child: Text("Belum ada aktivitas tersimpan"))
                   : ListView.separated(
                       itemCount: history.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
@@ -111,7 +107,7 @@ class _CounterViewState extends State<CounterView> {
             heroTag: 'decrement',
             onPressed: () {
               setState(() {
-                _controller.decrement();
+                _controller.decrement(widget.username);
               });
             },
             tooltip: 'Kurang',
@@ -124,7 +120,7 @@ class _CounterViewState extends State<CounterView> {
             heroTag: 'increment',
             onPressed: () {
               setState(() {
-                _controller.increment();
+                _controller.increment(widget.username);
               });
             },
             tooltip: 'Tambah',
@@ -137,23 +133,21 @@ class _CounterViewState extends State<CounterView> {
     );
   }
 
-  // --- LOGIC TAMBAHAN UNTUK LOGOUT ---
   void _handleLogout() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text("Konfirmasi Logout"),
-          content: const Text("Apakah Anda yakin ingin keluar?"),
+          content: const Text("Yakin keluar? Data tetap tersimpan."),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context), // Tutup dialog
+              onPressed: () => Navigator.pop(context),
               child: const Text("Batal"),
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // Tutup dialog
-                // Kembali ke Onboarding & Hapus History Halaman (Stack)
+                Navigator.pop(context);
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(
@@ -178,7 +172,7 @@ class _CounterViewState extends State<CounterView> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Konfirmasi Reset'),
-        content: const Text('Yakin Ingin diReset?'),
+        content: const Text('Yakin Reset? Angka akan kembali ke 0.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -193,11 +187,11 @@ class _CounterViewState extends State<CounterView> {
     );
     if (shouldReset == true) {
       setState(() {
-        _controller.reset();
+        _controller.reset(widget.username);
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text(' Udah direset')));
+      ).showSnackBar(const SnackBar(content: Text('Counter direset ke 0')));
     }
   }
 
