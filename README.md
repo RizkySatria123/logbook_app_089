@@ -65,7 +65,7 @@ Pada modul ini, aplikasi menerapkan arsitektur **Modular** (`features/auth`, `fe
 ### Modul 2: Auth & Persistence
 | Halaman Login | Halaman Counter (User) | Alert Logout |
 |:---:|:---:|:---:|
-| ![Login View](gambar_praktikum/Gambar1.jpeg) | ![Counter View](gambar_praktikum/Gambar2.jpeg) | ![Logout Dialog](gambar_praktikum/Gambar6.peg) |
+| ![Login View](gambar_praktikum/Gambar1.jpeg) | ![Counter View](gambar_praktikum/Gambar2.jpeg) | ![Logout Dialog](gambar_praktikum/Gambar6.jpeg) |
 
 ---
 
