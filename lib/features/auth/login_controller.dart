@@ -1,16 +1,47 @@
-// Lokasi: lib/features/auth/login_controller.dart
+import 'dart:async'; //  fitur Timer
 
 class LoginController {
-  // Database sederhana (Hardcoded)
-  final String _validUsername = "admin";
-  final String _validPassword = "123";
+  final Map<String, String> _users = {
+    'admin': '123',
+    'rizky': 'satria123',
+    'ikhsan': '5atriadi123',
+  };
 
-  // Fungsi pengecekan (Logic-Only) [cite: 117]
-  // Mengembalikan true jika cocok, false jika salah.
-  bool login(String username, String password) {
-    if (username == _validUsername && password == _validPassword) {
-      return true;
+  // fitur pengamanan
+  bool _isLocked = false;
+  int _failedAttempts = 0;
+
+  //  mengecek status terkunci di View
+  bool get isLocked => _isLocked;
+
+  // Fungsi Login dengan Validasi & Keamanan
+  Future<bool> login(String username, String password) async {
+    if (_isLocked) return false;
+
+    // Validasi Input Kosong
+    if (username.isEmpty || password.isEmpty) {
+      return false; // Gagal jika kosong
     }
-    return false;
+
+    // Cek Username & Password
+    if (_users.containsKey(username) && _users[username] == password) {
+      _failedAttempts = 0;
+      return true;
+    } else {
+      _failedAttempts++;
+
+      // Cek apakah sudah salah 3 kali?
+      if (_failedAttempts >= 3) {
+        _isLocked = true;
+
+        // Buka kunci otomatis setelah 10 detik
+        Timer(const Duration(seconds: 10), () {
+          _isLocked = false;
+          _failedAttempts = 0;
+        });
+      }
+
+      return false;
+    }
   }
 }
