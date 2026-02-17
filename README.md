@@ -61,8 +61,7 @@ Pada modul ini, aplikasi menerapkan arsitektur **Modular** (`features/auth`, `fe
 ### Modul 1: Counter & Logic
 | Multi-Step Counter | History Logger |
 |:---:|:---:|
-| ![Task 1 Modul 1](IMG1.png) | ![Task 2 Modul 1](IMG2.png) |
-
+| ![Task 1 Modul 1](gambar_praktikum/IMG1.png) | ![Task 2 Modul 1](gambar_praktikum/IMG2.png) |
 ### Modul 2: Auth & Persistence
 | Halaman Login | Halaman Counter (User) | Alert Logout |
 |:---:|:---:|:---:|
