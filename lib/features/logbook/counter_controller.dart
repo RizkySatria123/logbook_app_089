@@ -9,13 +9,15 @@ class CounterController {
   int get value => _counter;
   List<HistoryEntry> get history => List.unmodifiable(_history);
 
-  // --- LOGIKA PERSISTENCE ---
-
-  Future<void> loadData() async {
+  Future<void> loadData(String username) async {
     final prefs = await SharedPreferences.getInstance();
-    _counter = prefs.getInt('last_counter') ?? 0;
 
-    final List<String>? historyStrings = prefs.getStringList('last_history');
+    String keyCounter = 'counter_$username';
+    String keyHistory = 'history_$username';
+
+    _counter = prefs.getInt(keyCounter) ?? 0;
+
+    final List<String>? historyStrings = prefs.getStringList(keyHistory);
     if (historyStrings != null) {
       _history = historyStrings
           .map((e) => HistoryEntry.fromJson(jsonDecode(e)))
@@ -23,39 +25,38 @@ class CounterController {
     }
   }
 
-  Future<void> _saveData() async {
+  Future<void> _saveData(String username) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('last_counter', _counter);
+
+    String keyCounter = 'counter_$username';
+    String keyHistory = 'history_$username';
+
+    await prefs.setInt(keyCounter, _counter);
 
     final historyStrings = _history.map((e) => jsonEncode(e.toJson())).toList();
-    await prefs.setStringList('last_history', historyStrings);
+    await prefs.setStringList(keyHistory, historyStrings);
   }
-
-  // --- UPDATE: Method sekarang butuh 'username' ---
 
   void updateStep(int step) {
     _step = step;
   }
 
   void increment(String username) {
-    // Terima username
     _counter += _step;
     _addHistory(HistoryAction.tambah, _step, username);
-    _saveData();
+    _saveData(username);
   }
 
   void decrement(String username) {
-    // Terima username
     _counter -= _step;
     _addHistory(HistoryAction.kurang, _step, username);
-    _saveData();
+    _saveData(username);
   }
 
   void reset(String username) {
-    // Terima username
     _counter = 0;
     _addHistory(HistoryAction.reset, 0, username);
-    _saveData();
+    _saveData(username);
   }
 
   void _addHistory(HistoryAction action, int step, String username) {
@@ -64,7 +65,7 @@ class CounterController {
         action: action,
         step: step,
         timestamp: DateTime.now(),
-        username: username, // Simpan nama pelaku
+        username: username,
       ),
     );
     if (_history.length > 5) {
@@ -75,13 +76,11 @@ class CounterController {
 
 enum HistoryAction { tambah, kurang, reset }
 
-// --- UPDATE: Class HistoryEntry ---
-
 class HistoryEntry {
   final HistoryAction action;
   final int step;
   final DateTime timestamp;
-  final String username; // Kolom Baru: Username
+  final String username;
 
   HistoryEntry({
     required this.action,
@@ -96,12 +95,8 @@ class HistoryEntry {
       HistoryAction.kurang: 'Kurang',
       HistoryAction.reset: 'Reset',
     }[action];
-
     final time =
         '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
-
-    // UPDATE FORMAT TEXT DI SINI:
-    // Contoh output: "User admin Tambah nilai sebesar 1..."
     return 'User $username $actionLabel nilai sebesar $step pada jam $time';
   }
 
@@ -109,7 +104,7 @@ class HistoryEntry {
     'action': action.index,
     'step': step,
     'timestamp': timestamp.toIso8601String(),
-    'username': username, // Simpan ke JSON
+    'username': username,
   };
 
   factory HistoryEntry.fromJson(Map<String, dynamic> json) {
@@ -117,7 +112,6 @@ class HistoryEntry {
       action: HistoryAction.values[json['action']],
       step: json['step'],
       timestamp: DateTime.parse(json['timestamp']),
-      // Kasih nilai default 'Seseorang' biar data lama tidak error
       username: json['username'] ?? 'Seseorang',
     );
   }

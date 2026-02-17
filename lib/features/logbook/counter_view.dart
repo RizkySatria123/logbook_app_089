@@ -20,18 +20,43 @@ class _CounterViewState extends State<CounterView> {
   }
 
   Future<void> _loadInitialData() async {
-    await _controller.loadData();
+    await _controller.loadData(widget.username);
     setState(() {});
+  }
+
+  // SAPAAN WAKTU (Greeting)
+  String get greeting {
+    var hour = DateTime.now().hour;
+    if (hour < 11) {
+      return 'Selamat Pagi';
+    } else if (hour < 15) {
+      return 'Selamat Siang';
+    } else if (hour < 18) {
+      return 'Selamat Sore';
+    } else {
+      return 'Selamat Malam';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Ambil history
     final history = _controller.history.reversed.toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Logbook: ${widget.username}"),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "$greeting, ${widget.username}!",
+              style: const TextStyle(fontSize: 18),
+            ),
+            const Text(
+              "Logbook Activity",
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w300),
+            ),
+          ],
+        ),
         actions: [
           IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout),
         ],
