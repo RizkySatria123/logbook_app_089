@@ -12,85 +12,52 @@ class LogView extends StatefulWidget {
 }
 
 class _LogViewState extends State<LogView> {
-  // Inisialisasi Controller dan Text Controller (Dari Langkah 3 & 4)
   final LogController _controller = LogController();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
 
-  // SAPAAN WAKTU (Greeting) - Dipertahankan dari kodemu yang lama
-  String get greeting {
-    var hour = DateTime.now().hour;
-    if (hour < 11) {
-      return 'Selamat Pagi';
-    } else if (hour < 15) {
-      return 'Selamat Siang';
-    } else if (hour < 18) {
-      return 'Selamat Sore';
-    } else {
-      return 'Selamat Malam';
-    }
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 11) return 'Selamat Pagi';
+    if (hour < 15) return 'Selamat Siang';
+    if (hour < 18) return 'Selamat Sore';
+    return 'Selamat Malam';
   }
 
-  // Fungsi Dialog Tambah Catatan (Dari Langkah 4)
-  void _showAddLogDialog() {
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    super.dispose();
+  }
+
+  void _showLogDialog({int? index, LogModel? log}) {
+    final isEdit = index != null && log != null;
+
+    if (isEdit) {
+      _titleController.text = log.title;
+      _contentController.text = log.description;
+    } else {
+      _titleController.clear();
+      _contentController.clear();
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Tambah Catatan Baru"),
+        title: Text(isEdit ? "Edit Catatan" : "Tambah Catatan"),
         content: Column(
-          mainAxisSize: MainAxisSize.min, // Agar dialog tidak memenuhi layar
+          mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: _titleController,
               decoration: const InputDecoration(hintText: "Judul Catatan"),
             ),
+            const SizedBox(height: 12),
             TextField(
               controller: _contentController,
               decoration: const InputDecoration(hintText: "Isi Deskripsi"),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context), // Tutup tanpa simpan
-            child: const Text("Batal"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Jalankan fungsi tambah di Controller
-              _controller.addLog(
-                _titleController.text,
-                _contentController.text,
-              );
-
-              // Trigger UI Refresh
-              setState(() {});
-
-              // Bersihkan input dan tutup dialog
-              _titleController.clear();
-              _contentController.clear();
-              Navigator.pop(context);
-            },
-            child: const Text("Simpan"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Fungsi Dialog Edit Catatan (Dari Langkah 4)
-  void _showEditLogDialog(int index, LogModel log) {
-    _titleController.text = log.title;
-    _contentController.text = log.description;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Edit Catatan"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: _titleController),
-            TextField(controller: _contentController),
           ],
         ),
         actions: [
@@ -100,54 +67,57 @@ class _LogViewState extends State<LogView> {
           ),
           ElevatedButton(
             onPressed: () {
-              _controller.updateLog(
-                index,
-                _titleController.text,
-                _contentController.text,
-              );
-              _titleController.clear();
-              _contentController.clear();
+              if (_titleController.text.trim().isEmpty) return;
+
+              if (isEdit) {
+                _controller.updateLog(
+                  index,
+                  _titleController.text,
+                  _contentController.text,
+                );
+              } else {
+                _controller.addLog(
+                  _titleController.text,
+                  _contentController.text,
+                );
+              }
+
               Navigator.pop(context);
             },
-            child: const Text("Update"),
+            child: Text(isEdit ? "Update" : "Simpan"),
           ),
         ],
       ),
     );
   }
 
-  // Fungsi Logout - Dipertahankan dari kodemu yang lama
   void _handleLogout() {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Konfirmasi Logout"),
-          content: const Text("Yakin keluar? Data tetap tersimpan."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Batal"),
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text("Konfirmasi Logout"),
+        content: const Text("Yakin keluar? Data tetap tersimpan."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Batal"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const OnboardingView()),
+                (route) => false,
+              );
+            },
+            child: const Text(
+              "Ya, Keluar",
+              style: TextStyle(color: Colors.red),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const OnboardingView(),
-                  ),
-                  (route) => false,
-                );
-              },
-              child: const Text(
-                "Ya, Keluar",
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 
@@ -159,11 +129,11 @@ class _LogViewState extends State<LogView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "$greeting, ${widget.username}!",
+              "$_greeting, ${widget.username}!",
               style: const TextStyle(fontSize: 18),
             ),
             const Text(
-              "Logbook Activity",
+              "Aktivitas LogBook Kamu",
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w300),
             ),
           ],
@@ -172,33 +142,43 @@ class _LogViewState extends State<LogView> {
           IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout),
         ],
       ),
-      // Body Reactive dengan ValueListenableBuilder (Dari Langkah 3 & 5)
       body: ValueListenableBuilder<List<LogModel>>(
         valueListenable: _controller.logsNotifier,
         builder: (context, currentLogs, child) {
           if (currentLogs.isEmpty) {
-            return const Center(child: Text("Belum ada catatan."));
+            return const Center(child: Text("Belum ada logbook."));
           }
           return ListView.builder(
             itemCount: currentLogs.length,
             itemBuilder: (context, index) {
               final log = currentLogs[index];
               return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: ListTile(
-                  leading: const Icon(Icons.note),
-                  title: Text(log.title),
+                  leading: const Icon(Icons.note_alt_outlined),
+                  title: Text(
+                    log.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: Text(log.description),
-                  trailing: Wrap(
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => _showEditLogDialog(index, log),
+                        icon: const Icon(
+                          Icons.edit,
+                          color: Colors.blue,
+                          size: 20,
+                        ),
+                        onPressed: () => _showLogDialog(index: index, log: log),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          setState(() => _controller.removeLog(index));
-                        },
+                        icon: const Icon(
+                          Icons.delete,
+                          color: Colors.red,
+                          size: 20,
+                        ),
+                        onPressed: () => _controller.removeLog(index),
                       ),
                     ],
                   ),
@@ -208,9 +188,8 @@ class _LogViewState extends State<LogView> {
           );
         },
       ),
-      // Floating Action Button Baru (Dari Langkah 4)
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddLogDialog, // Panggil fungsi dialog yang baru dibuat
+        onPressed: () => _showLogDialog(),
         child: const Icon(Icons.add),
       ),
     );

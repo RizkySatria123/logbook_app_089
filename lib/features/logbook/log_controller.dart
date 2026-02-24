@@ -15,7 +15,7 @@ class LogController {
     final newLog = LogModel(
       title: title,
       description: desc,
-      date: DateTime.now().toString(),
+      date: DateTime.now().toIso8601String(),
     );
     logsNotifier.value = [...logsNotifier.value, newLog];
     saveToDisk();
@@ -26,7 +26,7 @@ class LogController {
     currentLogs[index] = LogModel(
       title: title,
       description: desc,
-      date: DateTime.now().toString(),
+      date: DateTime.now().toIso8601String(),
     );
     logsNotifier.value = currentLogs;
     saveToDisk();
@@ -50,6 +50,7 @@ class LogController {
   Future<void> loadFromDisk() async {
     final prefs = await SharedPreferences.getInstance();
     final String? data = prefs.getString(_storageKey);
+
     if (data != null) {
       final List decoded = jsonDecode(data);
       logsNotifier.value = decoded.map((e) => LogModel.fromMap(e)).toList();

@@ -56,16 +56,56 @@ Pada modul ini, aplikasi menerapkan arsitektur **Modular** (`features/auth`, `fe
 
 ---
 
+## 📝 MODUL 3: Data Modeling & Dynamic Lists
+
+Pada modul ini, aplikasi bertransformasi dari sekadar penghitung angka menjadi aplikasi sistem Logbook Digital yang fungsional dengan arsitektur yang mendukung *Dependency Inversion* dan *Reactive Programming*.
+
+### Task 1: Tugas Pendahuluan
+**Fokus:** Pemahaman teoritis mengenai Class, Mapping Data, dan teknik Rendering UI.
+- [x] **Konsep Model:** Membuat Class Dart dengan *Constructor* yang menggunakan *Named Parameters*.
+- [x] **Mapping Data:** Menggunakan fungsi `jsonEncode()` dan `jsonDecode()` untuk konversi data Object ke format JSON String.
+- [x] **Analisis:** Mengapa `ListView.builder` lebih efisien (Lazy Loading) daripada penggunaan `Column` di dalam `SingleChildScrollView`.
+
+### Task 2: The Daily Logger (LOTS)
+**Fokus:** Implementasi CRUD (Create, Read, Update, Delete) dasar dan menampilkan data dinamis.
+
+**Spesifikasi & Kriteria Selesai di Lab (70%):**
+- [x] Berhasil menambah, mengedit, dan menghapus item dari daftar secara *real-time*.
+- [x] Daftar catatan tampil rapi menggunakan widget `ListView.builder`.
+- [x] Menggunakan Class Model (`LogModel`) sebagai standar data, bukan String mentah.
+
+### Task 3: Reactive List Management (MOTS)
+**Fokus:** Menerapkan pemrograman reaktif agar antarmuka UI tersinkronisasi secara otomatis.
+
+**Spesifikasi & Kriteria Selesai di Lab (70%):**
+- [x] UI terupdate secara otomatis tanpa penggunaan `setState()` manual pada fungsi CRUD berkat penggunaan `ValueListenableBuilder`.
+- [x] Logika reaktif terpusat di dalam file Controller menggunakan tipe data `ValueNotifier`.
+
+### Task 4: Persistent JSON Storage (HOTS)
+**Fokus:** Menyimpan kumpulan objek ke penyimpanan lokal secara permanen menggunakan format JSON.
+
+**Spesifikasi & Kriteria Selesai di Lab (70%):**
+- [x] Seluruh daftar catatan tidak hilang meskipun aplikasi dilakukan *Hot Restart* atau ditutup.
+- [x] Proses *encoding* (Object ke JSON) dan *decoding* (JSON ke Object) berjalan sukses tanpa error saat menyimpan (`saveToDisk`) maupun memuat data (`loadFromDisk`).
+
+---
+
 ## 📸 Screenshots
 
 ### Modul 1: Counter & Logic
 | Multi-Step Counter | History Logger |
 |:---:|:---:|
 | ![Task 1 Modul 1](gambar_praktikum/IMG1.png) | ![Task 2 Modul 1](gambar_praktikum/IMG2.png) |
+
 ### Modul 2: Auth & Persistence
 | Halaman Login | Halaman Counter (User) | Alert Logout |
 |:---:|:---:|:---:|
 | ![Login View](gambar_praktikum/Gambar1.jpeg) | ![Counter View](gambar_praktikum/Gambar2.jpeg) | ![Logout Dialog](gambar_praktikum/Gambar6.jpeg) |
+
+### Modul 3: Data Modeling & Dynamic Lists
+| Tampilan List Kosong | Form Dialog Tambah | Tampilan List & Edit |
+|:---:|:---:|:---:|
+| *(Screenshot 1 di sini)* | *(Screenshot 2 di sini)* | *(Screenshot 3 di sini)* |
 
 ---
 
@@ -78,3 +118,8 @@ Prinsip SRP membuat logika counter dan pencatatan riwayat terpisah di `CounterCo
 1. **Arsitektur Modular:** Memisahkan fitur ke dalam folder `features/` membuat kode lebih rapi, meskipun harus teliti dalam mengatur *import path*.
 2. **Navigation Stack:** Memahami perbedaan `pushReplacement` (untuk Login) dan `pushAndRemoveUntil` (untuk Logout) sangat penting demi keamanan alur aplikasi.
 3. **Data Persistence:** Tantangan terbesar adalah menyimpan List Object ke Shared Preferences yang membutuhkan proses encode/decode JSON.
+
+### Modul 3
+1. **Konsep Baru:** *(Tulis poin baru yang dipahami, misal: penggunaan ValueNotifier).*
+2. **Kemenangan Kecil:** *(Tulis keberhasilan kecil, misal: menyelesaikan CRUD tanpa error).*
+3. **Target Berikutnya:** *(Tulis hal yang ingin dipelajari lebih lanjut).*
