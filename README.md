@@ -88,6 +88,11 @@ Pada modul ini, aplikasi bertransformasi dari sekadar penghitung angka menjadi a
 - [x] Seluruh daftar catatan tidak hilang meskipun aplikasi dilakukan *Hot Restart* atau ditutup.
 - [x] Proses *encoding* (Object ke JSON) dan *decoding* (JSON ke Object) berjalan sukses tanpa error saat menyimpan (`saveToDisk`) maupun memuat data (`loadFromDisk`).
 
+### Homework & UI/UX Enhancements (30%)
+- [x] **Search Feature:** Fitur pencarian *real-time* menggunakan input text yang tersinkronisasi dengan list data.
+- [x] **Swipe to Delete:** Fitur menghapus catatan secara intuitif menggunakan widget `Dismissible` dengan animasi geser.
+- [x] **Empty State:** Menampilkan ilustrasi khusus saat daftar catatan kosong atau pencarian tidak ditemukan.
+
 ---
 
 ## 📸 Screenshots
@@ -103,12 +108,11 @@ Pada modul ini, aplikasi bertransformasi dari sekadar penghitung angka menjadi a
 | ![Login View](gambar_praktikum/Gambar1.jpeg) | ![Counter View](gambar_praktikum/Gambar2.jpeg) | ![Logout Dialog](gambar_praktikum/Gambar6.jpeg) |
 
 ### Modul 3: Data Modeling & Dynamic Lists
-| Tampilan List Kosong | Form Dialog Tambah | Tampilan List & Edit |
+| Tampilan Edit | Form Dialog Tambah | Fitur Swipe to Delete |
 |:---:|:---:|:---:|
-| *(Screenshot 1 di sini)* | *(Screenshot 2 di sini)* | *(Screenshot 3 di sini)* |
+| ![Edit View](gambar_praktikum/Gambar7.png) | ![Add View](gambar_praktikum/Gambar8.png) | ![Swipe to delete](gambar_praktikum/Gambar9.png) |
 
 ---
-
 ## 🧠 Self Reflection (Lesson Learnt)
 
 ### Modul 1
@@ -120,6 +124,6 @@ Prinsip SRP membuat logika counter dan pencatatan riwayat terpisah di `CounterCo
 3. **Data Persistence:** Tantangan terbesar adalah menyimpan List Object ke Shared Preferences yang membutuhkan proses encode/decode JSON.
 
 ### Modul 3
-1. **Konsep Baru:** *(Tulis poin baru yang dipahami, misal: penggunaan ValueNotifier).*
-2. **Kemenangan Kecil:** *(Tulis keberhasilan kecil, misal: menyelesaikan CRUD tanpa error).*
-3. **Target Berikutnya:** *(Tulis hal yang ingin dipelajari lebih lanjut).*
+1. **Konsep Baru:** Baru menyadari kekuatan sebenarnya dari Reactive Programming di Flutter. Penggunaan kombinasi `ValueNotifier` dan `ValueListenableBuilder` ternyata memungkinkan antarmuka (UI) untuk diperbarui secara otomatis ketika ada perubahan data tanpa perlu memanggil `setState()` berulang kali.
+2. **Kemenangan Kecil:** Berhasil membuat fungsionalitas CRUD berjalan mulus dengan UI yang dinamis, serta sukses menghilangkan warning garis kuning terkait penggunaan `BuildContext` di dalam fungsi asynchronous (async/await) hanya dengan menambahkan baris pengecekan `if (!mounted)`.
+3. **Target Berikutnya:** Ingin mempelajari cara menghubungkan aplikasi logbook ini ke layanan Backend-as-a-Service (BaaS) seperti Supabase atau MongoDB atau membuat REST API sendiri. Tujuannya agar data tidak hanya tersimpan secara lokal di memori HP, tetapi juga bisa tersinkronisasi dan diakses melalui cloud.

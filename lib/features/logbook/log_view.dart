@@ -15,6 +15,7 @@ class _LogViewState extends State<LogView> {
   final LogController _controller = LogController();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   String get _greeting {
     final hour = DateTime.now().hour;
@@ -28,6 +29,7 @@ class _LogViewState extends State<LogView> {
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -70,11 +72,17 @@ class _LogViewState extends State<LogView> {
               if (_titleController.text.trim().isEmpty) return;
 
               if (isEdit) {
-                _controller.updateLog(
-                  index,
-                  _titleController.text,
-                  _contentController.text,
+                // Cari index asli di list utama untuk di-update
+                final realIndex = _controller.logsNotifier.value.indexWhere(
+                  (l) => l.date == log.date,
                 );
+                if (realIndex != -1) {
+                  _controller.updateLog(
+                    realIndex,
+                    _titleController.text,
+                    _contentController.text,
+                  );
+                }
               } else {
                 _controller.addLog(
                   _titleController.text,
@@ -133,7 +141,7 @@ class _LogViewState extends State<LogView> {
               style: const TextStyle(fontSize: 18),
             ),
             const Text(
-              "Aktivitas LogBook Kamu",
+              "Logbook Activity",
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w300),
             ),
           ],
@@ -142,51 +150,137 @@ class _LogViewState extends State<LogView> {
           IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout),
         ],
       ),
-      body: ValueListenableBuilder<List<LogModel>>(
-        valueListenable: _controller.logsNotifier,
-        builder: (context, currentLogs, child) {
-          if (currentLogs.isEmpty) {
-            return const Center(child: Text("Belum ada logbook."));
-          }
-          return ListView.builder(
-            itemCount: currentLogs.length,
-            itemBuilder: (context, index) {
-              final log = currentLogs[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ListTile(
-                  leading: const Icon(Icons.note_alt_outlined),
-                  title: Text(
-                    log.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(log.description),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.edit,
-                          color: Colors.blue,
-                          size: 20,
-                        ),
-                        onPressed: () => _showLogDialog(index: index, log: log),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete,
-                          color: Colors.red,
-                          size: 20,
-                        ),
-                        onPressed: () => _controller.removeLog(index),
-                      ),
-                    ],
-                  ),
+      body: Column(
+        children: [
+          // HOMEWORK: Kotak Pencarian
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) => _controller.searchLog(value),
+              decoration: InputDecoration(
+                labelText: "Cari Catatan...",
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              );
-            },
-          );
-        },
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ValueListenableBuilder<List<LogModel>>(
+              valueListenable: _controller.filteredLogsNotifier,
+              builder: (context, currentLogs, child) {
+                if (currentLogs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inbox_outlined,
+                          size: 80,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _searchController.text.isEmpty
+                              ? "Belum ada catatan logbook."
+                              : "Catatan tidak ditemukan.",
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: currentLogs.length,
+                  itemBuilder: (context, index) {
+                    final log = currentLogs[index];
+                    return Dismissible(
+                      key: Key(log.date),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade400,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        child: const Icon(
+                          Icons.delete_sweep,
+                          color: Colors.white,
+                          size: 30,
+                        ),
+                      ),
+                      onDismissed: (direction) {
+                        _controller.removeLog(log);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Catatan berhasil dihapus"),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      child: Card(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.blue.shade100,
+                            child: const Icon(
+                              Icons.note_alt_outlined,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          title: Text(
+                            log.title,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(
+                              log.description,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(
+                              Icons.edit_note,
+                              color: Colors.blueGrey,
+                              size: 28,
+                            ),
+                            onPressed: () =>
+                                _showLogDialog(index: index, log: log),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showLogDialog(),

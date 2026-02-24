@@ -5,6 +5,7 @@ import './models/log_model.dart';
 
 class LogController {
   final ValueNotifier<List<LogModel>> logsNotifier = ValueNotifier([]);
+  final ValueNotifier<List<LogModel>> filteredLogsNotifier = ValueNotifier([]);
   static const String _storageKey = 'user_logs_data';
 
   LogController() {
@@ -18,6 +19,7 @@ class LogController {
       date: DateTime.now().toIso8601String(),
     );
     logsNotifier.value = [...logsNotifier.value, newLog];
+    _syncFilteredLogs();
     saveToDisk();
   }
 
@@ -26,17 +28,37 @@ class LogController {
     currentLogs[index] = LogModel(
       title: title,
       description: desc,
-      date: DateTime.now().toIso8601String(),
+      date: currentLogs[index].date,
     );
     logsNotifier.value = currentLogs;
+    _syncFilteredLogs();
     saveToDisk();
   }
 
-  void removeLog(int index) {
+  void removeLog(LogModel logToRemove) {
     final currentLogs = List<LogModel>.from(logsNotifier.value);
-    currentLogs.removeAt(index);
+    currentLogs.removeWhere((log) => log.date == logToRemove.date);
     logsNotifier.value = currentLogs;
+    _syncFilteredLogs();
     saveToDisk();
+  }
+
+  void searchLog(String query) {
+    if (query.isEmpty) {
+      filteredLogsNotifier.value = logsNotifier.value;
+    } else {
+      filteredLogsNotifier.value = logsNotifier.value
+          .where(
+            (log) =>
+                log.title.toLowerCase().contains(query.toLowerCase()) ||
+                log.description.toLowerCase().contains(query.toLowerCase()),
+          )
+          .toList();
+    }
+  }
+
+  void _syncFilteredLogs() {
+    filteredLogsNotifier.value = logsNotifier.value;
   }
 
   Future<void> saveToDisk() async {
@@ -54,6 +76,7 @@ class LogController {
     if (data != null) {
       final List decoded = jsonDecode(data);
       logsNotifier.value = decoded.map((e) => LogModel.fromMap(e)).toList();
+      _syncFilteredLogs();
     }
   }
 }
