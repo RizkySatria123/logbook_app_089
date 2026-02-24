@@ -12,6 +12,7 @@ class LogView extends StatefulWidget {
 }
 
 class _LogViewState extends State<LogView> {
+  // Menggunakan Controller yang sudah ada fitur Search (dari langkah sebelumnya)
   final LogController _controller = LogController();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
@@ -33,6 +34,7 @@ class _LogViewState extends State<LogView> {
     super.dispose();
   }
 
+  // --- FUNGSI DIALOG YANG DIKUSTOMISASI ---
   void _showLogDialog({int? index, LogModel? log}) {
     final isEdit = index != null && log != null;
 
@@ -47,18 +49,46 @@ class _LogViewState extends State<LogView> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(isEdit ? "Edit Catatan" : "Tambah Catatan"),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.0),
+          side: BorderSide(color: Colors.lightBlueAccent.shade200, width: 3.0),
+        ),
+        title: Text(
+          isEdit ? "Edit Catatan" : "Tambah Catatan",
+          style: TextStyle(
+            color: Colors.blue.shade800,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: _titleController,
-              decoration: const InputDecoration(hintText: "Judul Catatan"),
+              decoration: InputDecoration(
+                hintText: "Judul Catatan",
+                filled: true,
+                fillColor: Colors.blue.shade50,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _contentController,
-              decoration: const InputDecoration(hintText: "Isi Deskripsi"),
+              decoration: InputDecoration(
+                hintText: "Isi Deskripsi",
+                filled: true,
+                fillColor: Colors.blue.shade50,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              maxLines: 3,
             ),
           ],
         ),
@@ -68,11 +98,17 @@ class _LogViewState extends State<LogView> {
             child: const Text("Batal"),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             onPressed: () {
               if (_titleController.text.trim().isEmpty) return;
 
               if (isEdit) {
-                // Cari index asli di list utama untuk di-update
                 final realIndex = _controller.logsNotifier.value.indexWhere(
                   (l) => l.date == log.date,
                 );
@@ -103,6 +139,8 @@ class _LogViewState extends State<LogView> {
     showDialog(
       context: context,
       builder: (BuildContext context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text("Konfirmasi Logout"),
         content: const Text("Yakin keluar? Data tetap tersimpan."),
         actions: [
@@ -133,26 +171,42 @@ class _LogViewState extends State<LogView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue.shade700,
+        foregroundColor: Colors.white,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               "$_greeting, ${widget.username}!",
-              style: const TextStyle(fontSize: 18),
+              style: const TextStyle(
+                fontSize: 18,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const Text(
               "Logbook Activity",
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w300),
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white70,
+                fontWeight: FontWeight.w400,
+              ),
             ),
           ],
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout),
+          IconButton(
+            icon: const Icon(
+              Icons.logout,
+              color: Colors.white,
+            ), // Ikon logout jadi putih
+            onPressed: _handleLogout,
+          ),
         ],
       ),
       body: Column(
         children: [
-          // HOMEWORK: Kotak Pencarian
+          // Kotak Pencarian
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -172,6 +226,7 @@ class _LogViewState extends State<LogView> {
             child: ValueListenableBuilder<List<LogModel>>(
               valueListenable: _controller.filteredLogsNotifier,
               builder: (context, currentLogs, child) {
+                // Empty State
                 if (currentLogs.isEmpty) {
                   return Center(
                     child: Column(
@@ -201,6 +256,7 @@ class _LogViewState extends State<LogView> {
                   itemCount: currentLogs.length,
                   itemBuilder: (context, index) {
                     final log = currentLogs[index];
+                    // Swipe to Delete
                     return Dismissible(
                       key: Key(log.date),
                       direction: DismissDirection.endToStart,
@@ -226,7 +282,7 @@ class _LogViewState extends State<LogView> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text("Catatan berhasil dihapus"),
-                            duration: Duration(seconds: 2),
+                            duration: Duration(seconds: 1),
                           ),
                         );
                       },
@@ -282,9 +338,15 @@ class _LogViewState extends State<LogView> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showLogDialog(),
-        child: const Icon(Icons.add),
+        backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text(
+          "Add catatan",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
