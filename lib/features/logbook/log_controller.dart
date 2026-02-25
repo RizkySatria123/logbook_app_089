@@ -12,23 +12,27 @@ class LogController {
     loadFromDisk();
   }
 
-  void addLog(String title, String desc) {
+  // BARU: Tambah parameter kategori
+  void addLog(String title, String desc, String category) {
     final newLog = LogModel(
       title: title,
       description: desc,
       date: DateTime.now().toIso8601String(),
+      category: category,
     );
     logsNotifier.value = [...logsNotifier.value, newLog];
     _syncFilteredLogs();
     saveToDisk();
   }
 
-  void updateLog(int index, String title, String desc) {
+  // BARU: Tambah parameter kategori
+  void updateLog(int index, String title, String desc, String category) {
     final currentLogs = List<LogModel>.from(logsNotifier.value);
     currentLogs[index] = LogModel(
       title: title,
       description: desc,
       date: currentLogs[index].date,
+      category: category,
     );
     logsNotifier.value = currentLogs;
     _syncFilteredLogs();
