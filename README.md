@@ -110,7 +110,7 @@ Pada modul ini, aplikasi bertransformasi dari sekadar penghitung angka menjadi a
 ### Modul 3: Data Modeling & Dynamic Lists
 | Tampilan Edit | Form Dialog Tambah | Fitur Swipe to Delete |
 |:---:|:---:|:---:|
-| ![Edit View](gambar_praktikum/Gambar7.png) | ![Add View](gambar_praktikum/Gambar8.png) | ![Swipe to delete](gambar_praktikum/Gambar9.png) |
+| ![Edit View](gambar_praktikum/IMG6.jpeg) | ![Add View](gambar_praktikum/IMG4.jpeg) | ![Swipe to delete](gambar_praktikum/Gambar9.png) |
 
 ---
 ## 🧠 Self Reflection (Lesson Learnt)
