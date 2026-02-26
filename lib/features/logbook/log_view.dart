@@ -64,7 +64,6 @@ class _LogViewState extends State<LogView> {
     showDialog(
       context: context,
       builder: (context) {
-        // Menggunakan StatefulBuilder agar Dropdown bisa di-update di dalam dialog
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
@@ -113,7 +112,7 @@ class _LogViewState extends State<LogView> {
                     maxLines: 2,
                   ),
                   const SizedBox(height: 12),
-                  // BARU: Dropdown Kategori
+                  // Dropdown Kategori
                   DropdownButtonFormField<String>(
                     value: selectedCategory,
                     decoration: InputDecoration(
@@ -158,7 +157,6 @@ class _LogViewState extends State<LogView> {
                       final realIndex = _controller.logsNotifier.value
                           .indexWhere((l) => l.date == log.date);
                       if (realIndex != -1) {
-                        // BARU: Lempar data kategori saat update
                         _controller.updateLog(
                           realIndex,
                           _titleController.text,
@@ -167,7 +165,6 @@ class _LogViewState extends State<LogView> {
                         );
                       }
                     } else {
-                      // BARU: Lempar data kategori saat nambah
                       _controller.addLog(
                         _titleController.text,
                         _contentController.text,
@@ -183,6 +180,61 @@ class _LogViewState extends State<LogView> {
           },
         );
       },
+    );
+  }
+
+  Future<bool?> _showDeleteConfirmation(LogModel log) {
+    return showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24.0),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_outline, color: Colors.orange, size: 28),
+            const SizedBox(width: 8),
+            const Text(
+              "Konfirmasi Hapus",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text("Apakah Anda yakin ingin menghapus catatan ini?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              "Batal",
+              style: TextStyle(
+                color: Colors.blueGrey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              _controller.removeLog(log);
+              Navigator.pop(context, true);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Catatan berhasil dihapus"),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+            child: const Text("Hapus"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -322,14 +374,8 @@ class _LogViewState extends State<LogView> {
                           size: 30,
                         ),
                       ),
-                      onDismissed: (direction) {
-                        _controller.removeLog(log);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Catatan berhasil dihapus"),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
+                      confirmDismiss: (direction) async {
+                        return await _showDeleteConfirmation(log);
                       },
                       child: Card(
                         margin: const EdgeInsets.symmetric(
@@ -340,7 +386,6 @@ class _LogViewState extends State<LogView> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         elevation: 2,
-                        // BARU: Mewarnai Card sesuai Kategori
                         color: _getCategoryColor(log.category),
                         child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(
@@ -365,7 +410,6 @@ class _LogViewState extends State<LogView> {
                                   ),
                                 ),
                               ),
-                              // BARU: Label kecil untuk kategori
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
@@ -393,14 +437,27 @@ class _LogViewState extends State<LogView> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(
-                              Icons.edit_note,
-                              color: Colors.blueGrey,
-                              size: 28,
-                            ),
-                            onPressed: () =>
-                                _showLogDialog(index: index, log: log),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit_note,
+                                  color: Colors.blueGrey,
+                                  size: 28,
+                                ),
+                                onPressed: () =>
+                                    _showLogDialog(index: index, log: log),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.redAccent,
+                                  size: 28,
+                                ),
+                                onPressed: () => _showDeleteConfirmation(log),
+                              ),
+                            ],
                           ),
                         ),
                       ),
