@@ -1,50 +1,121 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import './models/log_model.dart';
+import 'package:mongo_dart/mongo_dart.dart';
+import 'package:logbook_app_089/features/logbook/models/log_model.dart';
+import 'package:logbook_app_089/services/mongo_service.dart';
+import 'package:logbook_app_089/helpers/log_helper.dart';
 
 class LogController {
   final ValueNotifier<List<LogModel>> logsNotifier = ValueNotifier([]);
   final ValueNotifier<List<LogModel>> filteredLogsNotifier = ValueNotifier([]);
-  static const String _storageKey = 'user_logs_data';
+
+  static const String collectionName = "logs";
+  final String _source = "log_controller.dart";
 
   LogController() {
-    loadFromDisk();
+    fetchLogsFromDB();
   }
 
-  // BARU: Tambah parameter kategori
-  void addLog(String title, String desc, String category) {
-    final newLog = LogModel(
-      title: title,
-      description: desc,
-      date: DateTime.now().toIso8601String(),
-      category: category,
-    );
-    logsNotifier.value = [...logsNotifier.value, newLog];
-    _syncFilteredLogs();
-    saveToDisk();
+  Future<void> fetchLogsFromDB() async {
+    try {
+      final db = MongoService().db;
+      if (db == null) return; // Pengaman agar Flutter tidak error 'null'
+
+      final collection = db.collection(collectionName);
+      final logsData = await collection
+          .find(where.sortBy('date', descending: true))
+          .toList();
+
+      logsNotifier.value = logsData.map((e) => LogModel.fromMap(e)).toList();
+      _syncFilteredLogs();
+
+      await LogHelper.writeLog(
+        "Berhasil memuat ${logsNotifier.value.length} data",
+        source: _source,
+        level: 2,
+      );
+    } catch (e) {
+      await LogHelper.writeLog(
+        "Gagal memuat data MongoDB: $e",
+        source: _source,
+        level: 1,
+      );
+    }
   }
 
-  // BARU: Tambah parameter kategori
-  void updateLog(int index, String title, String desc, String category) {
-    final currentLogs = List<LogModel>.from(logsNotifier.value);
-    currentLogs[index] = LogModel(
-      title: title,
-      description: desc,
-      date: currentLogs[index].date,
-      category: category,
-    );
-    logsNotifier.value = currentLogs;
-    _syncFilteredLogs();
-    saveToDisk();
+  Future<void> addLog(String title, String desc, String category) async {
+    try {
+      final db = MongoService().db;
+      if (db == null) return;
+
+      final collection = db.collection(collectionName);
+      final newDoc = {
+        '_id': ObjectId(),
+        'title': title,
+        'description': desc,
+        'date': DateTime.now().toIso8601String(),
+        'category': category,
+      };
+
+      await collection.insert(newDoc);
+      await fetchLogsFromDB();
+    } catch (e) {
+      await LogHelper.writeLog(
+        "Gagal menambah data: $e",
+        source: _source,
+        level: 1,
+      );
+    }
   }
 
-  void removeLog(LogModel logToRemove) {
-    final currentLogs = List<LogModel>.from(logsNotifier.value);
-    currentLogs.removeWhere((log) => log.date == logToRemove.date);
-    logsNotifier.value = currentLogs;
-    _syncFilteredLogs();
-    saveToDisk();
+  Future<void> updateLog(
+    int index,
+    String title,
+    String desc,
+    String category,
+  ) async {
+    try {
+      final targetLog = logsNotifier.value[index];
+      if (targetLog.id == null) return;
+
+      final db = MongoService().db;
+      if (db == null) return;
+
+      final collection = db.collection(collectionName);
+      await collection.updateOne(
+        where.eq('_id', targetLog.id),
+        modify
+            .set('title', title)
+            .set('description', desc)
+            .set('category', category),
+      );
+
+      await fetchLogsFromDB();
+    } catch (e) {
+      await LogHelper.writeLog(
+        "Gagal update data: $e",
+        source: _source,
+        level: 1,
+      );
+    }
+  }
+
+  Future<void> removeLog(LogModel logToRemove) async {
+    try {
+      if (logToRemove.id == null) return;
+
+      final db = MongoService().db;
+      if (db == null) return;
+
+      final collection = db.collection(collectionName);
+      await collection.remove(where.eq('_id', logToRemove.id));
+      await fetchLogsFromDB();
+    } catch (e) {
+      await LogHelper.writeLog(
+        "Gagal menghapus data: $e",
+        source: _source,
+        level: 1,
+      );
+    }
   }
 
   void searchLog(String query) {
@@ -63,24 +134,5 @@ class LogController {
 
   void _syncFilteredLogs() {
     filteredLogsNotifier.value = logsNotifier.value;
-  }
-
-  Future<void> saveToDisk() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String encodedData = jsonEncode(
-      logsNotifier.value.map((e) => e.toMap()).toList(),
-    );
-    await prefs.setString(_storageKey, encodedData);
-  }
-
-  Future<void> loadFromDisk() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? data = prefs.getString(_storageKey);
-
-    if (data != null) {
-      final List decoded = jsonDecode(data);
-      logsNotifier.value = decoded.map((e) => LogModel.fromMap(e)).toList();
-      _syncFilteredLogs();
-    }
   }
 }
