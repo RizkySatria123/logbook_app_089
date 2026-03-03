@@ -16,23 +16,22 @@ class _LogViewState extends State<LogView> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
-  bool _isLoading = false;
+
+  // Task 3: Variabel Future untuk menampung data dari Cloud
+  Future<List<LogModel>>? _logFuture;
 
   @override
   void initState() {
     super.initState();
-    _initDatabase();
+    // Inisialisasi data pertama kali
+    _refreshData();
   }
 
-  Future<void> _initDatabase() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-    try {
-      await MongoService().connect();
-      await _controller.fetchLogsFromDB();
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+  // Task 3: Fungsi Auto-Refresh untuk memicu fetch ulang ke Cloud
+  void _refreshData() {
+    setState(() {
+      _logFuture = MongoService().getLogs();
+    });
   }
 
   String get _greeting {
@@ -43,7 +42,6 @@ class _LogViewState extends State<LogView> {
     return 'Selamat Malam';
   }
 
-  // --- FUNGSI WARNA KATEGORI ---
   Color _getCategoryColor(String category) {
     switch (category) {
       case 'Pekerjaan':
@@ -57,8 +55,8 @@ class _LogViewState extends State<LogView> {
     }
   }
 
-  void _showLogDialog({int? index, LogModel? log}) {
-    final isEdit = index != null && log != null;
+  void _showLogDialog({LogModel? log}) {
+    final isEdit = log != null;
     String selectedCategory = isEdit ? log.category : 'Pribadi';
     if (isEdit) {
       _titleController.text = log.title;
@@ -113,11 +111,15 @@ class _LogViewState extends State<LogView> {
             ElevatedButton(
               onPressed: () async {
                 if (isEdit) {
-                  await _controller.updateLog(
-                    index,
-                    _titleController.text,
-                    _contentController.text,
-                    selectedCategory,
+                  // Index tidak lagi diperlukan karena kita pakai ID dari MongoDB
+                  await MongoService().updateLog(
+                    LogModel(
+                      id: log.id,
+                      title: _titleController.text,
+                      description: _contentController.text,
+                      category: selectedCategory,
+                      date: log.date,
+                    ),
                   );
                 } else {
                   await _controller.addLog(
@@ -126,7 +128,8 @@ class _LogViewState extends State<LogView> {
                     selectedCategory,
                   );
                 }
-                if (context.mounted) Navigator.pop(context);
+                Navigator.pop(context);
+                _refreshData(); // Task 3: Auto-Refresh setelah tambah/edit
               },
               child: Text(isEdit ? "Update" : "Simpan"),
             ),
@@ -155,15 +158,15 @@ class _LogViewState extends State<LogView> {
               ),
             ),
             const Text(
-              "Logbook Activity",
+              "Logbook Activity - Cloud Mode",
               style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _refreshData, // Tombol refresh manual
           ),
         ],
       ),
@@ -173,7 +176,9 @@ class _LogViewState extends State<LogView> {
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
-              onChanged: (v) => _controller.searchLog(v),
+              onChanged: (v) => setState(
+                () {},
+              ), // Memicu pembangunan ulang untuk filter pencarian
               decoration: InputDecoration(
                 hintText: "Cari Catatan...",
                 prefixIcon: const Icon(Icons.search),
@@ -186,15 +191,58 @@ class _LogViewState extends State<LogView> {
             ),
           ),
           Expanded(
-            child: ValueListenableBuilder<List<LogModel>>(
-              valueListenable: _controller.filteredLogsNotifier,
-              builder: (context, currentLogs, _) {
-                if (_isLoading) {
-                  return const Center(child: CircularProgressIndicator());
+            // Task 3: Menggunakan FutureBuilder untuk menangani Latensi
+            child: FutureBuilder<List<LogModel>>(
+              future: _logFuture,
+              builder: (context, snapshot) {
+                // 1. Task 3: Loading State
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text("Menghubungkan ke MongoDB Atlas..."),
+                      ],
+                    ),
+                  );
                 }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text("Error: ${snapshot.error}"));
+                }
+
+                // 2. Task 3: Menangani Data Kosong
+                final allLogs = snapshot.data ?? [];
+
+                // Logika Pencarian Lokal
+                final query = _searchController.text.toLowerCase();
+                final currentLogs = allLogs
+                    .where(
+                      (log) =>
+                          log.title.toLowerCase().contains(query) ||
+                          log.description.toLowerCase().contains(query),
+                    )
+                    .toList();
+
                 if (currentLogs.isEmpty) {
-                  return const Center(child: Text("Data tidak ditemukan"));
+                  return const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.cloud_off, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          "Data Kosong",
+                          style: TextStyle(color: Colors.grey, fontSize: 18),
+                        ),
+                      ],
+                    ),
+                  );
                 }
+
+                // 3. Menampilkan Data Nyata dari MongoDB Atlas
                 return ListView.builder(
                   itemCount: currentLogs.length,
                   itemBuilder: (context, index) {
@@ -207,12 +255,33 @@ class _LogViewState extends State<LogView> {
                         padding: const EdgeInsets.only(right: 20),
                         child: const Icon(Icons.delete, color: Colors.white),
                       ),
-                      onDismissed: (dir) => _controller.removeLog(log),
+                      confirmDismiss: (direction) async {
+                        return await showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text("Hapus Catatan?"),
+                            content: const Text(
+                              "Data akan dihapus permanen dari Cloud.",
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text("Batal"),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text("Hapus"),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      onDismissed: (dir) async {
+                        await MongoService().deleteLog(log.id!);
+                        _refreshData(); // Task 3: Refresh setelah hapus
+                      },
                       child: Card(
-                        color: _getCategoryColor(
-                          log.category,
-                        ), // Warna Kategori Kembali
-                        elevation: 2,
+                        color: _getCategoryColor(log.category),
                         margin: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
@@ -222,35 +291,10 @@ class _LogViewState extends State<LogView> {
                             log.title,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(log.description),
-                              const SizedBox(height: 4),
-                              // Badge Label Kategori
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white54,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  log.category,
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          subtitle: Text(log.description),
                           trailing: IconButton(
                             icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () =>
-                                _showLogDialog(index: index, log: log),
+                            onPressed: () => _showLogDialog(log: log),
                           ),
                         ),
                       ),
