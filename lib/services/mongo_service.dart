@@ -6,7 +6,7 @@ import 'package:logbook_app_089/helpers/log_helper.dart';
 class MongoService {
   static final MongoService _instance = MongoService._internal();
 
-  // Menggunakan nullable agar bisa mengecek status inisialisasi
+  // Menggunakan nullable untuk mengecek status inisialisasi
   Db? _db;
   DbCollection? _collection;
   final String _source = "mongo_service.dart";
@@ -14,7 +14,7 @@ class MongoService {
   factory MongoService() => _instance;
   MongoService._internal();
 
-  // Getter untuk akses database (diperlukan oleh controller Anda)
+  // Getter untuk akses database yang dibutuhkan controller [cite: 25]
   Db? get db => _db;
 
   /// Fungsi Internal untuk memastikan koleksi siap digunakan (Anti-LateInitializationError)
@@ -38,7 +38,7 @@ class MongoService {
 
       _db = await Db.create(dbUri);
 
-      // Timeout 15 detik agar lebih toleran terhadap jaringan seluler
+      // Timeout 15 detik untuk antisipasi latensi jaringan [cite: 315, 346]
       await _db!.open().timeout(
         const Duration(seconds: 15),
         onTimeout: () {
@@ -65,13 +65,14 @@ class MongoService {
     }
   }
 
-  /// READ: Mengambil data dari Cloud
+  /// READ: Mengambil data dari Cloud dengan Smart Logging
   Future<List<LogModel>> getLogs() async {
     try {
-      final collection = await _getSafeCollection(); // Gunakan jalur aman
+      final collection = await _getSafeCollection();
 
+      // Gunakan Level 3 (Verbose) untuk fetching data
       await LogHelper.writeLog(
-        "INFO: Fetching data from Cloud...",
+        "Fetching all logs from Cloud Atlas...",
         source: _source,
         level: 3,
       );
@@ -88,14 +89,15 @@ class MongoService {
     }
   }
 
-  /// CREATE: Menambahkan data baru
+  /// CREATE: Menambahkan data baru dengan Smart Logging
   Future<void> insertLog(LogModel log) async {
     try {
       final collection = await _getSafeCollection();
       await collection.insertOne(log.toMap());
 
+      // Gunakan Level 2 (Info) untuk keberhasilan operasi
       await LogHelper.writeLog(
-        "SUCCESS: Data '${log.title}' Saved to Cloud",
+        "SUCCESS: Log '${log.title}' saved to Atlas",
         source: _source,
         level: 2,
       );
@@ -155,7 +157,7 @@ class MongoService {
     }
   }
 
-  /// Fungsi untuk menutup koneksi
+  /// Fungsi untuk menutup koneksi database
   Future<void> close() async {
     if (_db != null) {
       await _db!.close();
