@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // Homework 3: Tambahan untuk format waktu
 import 'package:logbook_app_089/features/logbook/log_controller.dart';
 import 'package:logbook_app_089/features/logbook/models/log_model.dart';
 import 'package:logbook_app_089/services/mongo_service.dart';
@@ -17,18 +18,33 @@ class _LogViewState extends State<LogView> {
   final TextEditingController _contentController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
 
-  // Task 3: Variabel Future untuk menampung data dari Cloud
   Future<List<LogModel>>? _logFuture;
+  bool _isOffline = false; // Homework 1: Status untuk Connection Guard
 
   @override
   void initState() {
     super.initState();
-    // Inisialisasi data pertama kali
     _refreshData();
   }
 
-  // Task 3: Fungsi Auto-Refresh untuk memicu fetch ulang ke Cloud
-  void _refreshData() {
+  // Homework 1 & 2: Diperbarui dengan Connection Guard [cite: 889, 890]
+  Future<void> _refreshData() async {
+    setState(() => _isOffline = false); // Reset status offline saat ditarik
+
+    try {
+      await MongoService().connect(); // Memastikan koneksi sebelum fetch
+    } catch (e) {
+      setState(() => _isOffline = true); // Munculkan banner merah jika gagal
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Offline Mode: Gagal terhubung ke MongoDB Atlas."),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+
     setState(() {
       _logFuture = MongoService().getLogs();
     });
@@ -52,6 +68,25 @@ class _LogViewState extends State<LogView> {
         return Colors.green.shade100;
       default:
         return Colors.white;
+    }
+  }
+
+  // Homework 3: Logika format waktu lokal Indonesia
+  String _formatTimestamp(String isoDate) {
+    if (isoDate.isEmpty) return "";
+    try {
+      final date = DateTime.parse(isoDate);
+      final now = DateTime.now();
+      final diff = now.difference(date);
+
+      if (diff.inMinutes < 1) return "Baru saja";
+      if (diff.inMinutes < 60) return "${diff.inMinutes} menit yang lalu";
+      if (diff.inHours < 24) return "${diff.inHours} jam yang lalu";
+      if (diff.inDays < 7) return "${diff.inDays} hari yang lalu";
+
+      return DateFormat('dd MMM yyyy').format(date); // Butuh library intl
+    } catch (e) {
+      return isoDate;
     }
   }
 
@@ -111,7 +146,6 @@ class _LogViewState extends State<LogView> {
             ElevatedButton(
               onPressed: () async {
                 if (isEdit) {
-                  // Index tidak lagi diperlukan karena kita pakai ID dari MongoDB
                   await MongoService().updateLog(
                     LogModel(
                       id: log.id,
@@ -128,8 +162,8 @@ class _LogViewState extends State<LogView> {
                     selectedCategory,
                   );
                 }
-                Navigator.pop(context);
-                _refreshData(); // Task 3: Auto-Refresh setelah tambah/edit
+                if (context.mounted) Navigator.pop(context);
+                _refreshData();
               },
               child: Text(isEdit ? "Update" : "Simpan"),
             ),
@@ -166,19 +200,37 @@ class _LogViewState extends State<LogView> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _refreshData, // Tombol refresh manual
+            onPressed: _refreshData,
           ),
         ],
       ),
       body: Column(
         children: [
+          // Homework 1: Connection Guard Banner
+          if (_isOffline)
+            Container(
+              width: double.infinity,
+              color: Colors.redAccent,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              child: const Row(
+                children: [
+                  Icon(Icons.wifi_off, color: Colors.white, size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "Offline Mode: Koneksi terputus. Tarik layar ke bawah untuk mencoba lagi.",
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
-              onChanged: (v) => setState(
-                () {},
-              ), // Memicu pembangunan ulang untuk filter pencarian
+              onChanged: (v) => setState(() {}),
               decoration: InputDecoration(
                 hintText: "Cari Catatan...",
                 prefixIcon: const Icon(Icons.search),
@@ -191,11 +243,9 @@ class _LogViewState extends State<LogView> {
             ),
           ),
           Expanded(
-            // Task 3: Menggunakan FutureBuilder untuk menangani Latensi
             child: FutureBuilder<List<LogModel>>(
               future: _logFuture,
               builder: (context, snapshot) {
-                // 1. Task 3: Loading State
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                     child: Column(
@@ -213,10 +263,7 @@ class _LogViewState extends State<LogView> {
                   return Center(child: Text("Error: ${snapshot.error}"));
                 }
 
-                // 2. Task 3: Menangani Data Kosong
                 final allLogs = snapshot.data ?? [];
-
-                // Logika Pencarian Lokal
                 final query = _searchController.text.toLowerCase();
                 final currentLogs = allLogs
                     .where(
@@ -234,7 +281,7 @@ class _LogViewState extends State<LogView> {
                         Icon(Icons.cloud_off, size: 64, color: Colors.grey),
                         SizedBox(height: 16),
                         Text(
-                          "Data Kosong",
+                          "Data Kosong / Tarik layar untuk memuat",
                           style: TextStyle(color: Colors.grey, fontSize: 18),
                         ),
                       ],
@@ -242,64 +289,110 @@ class _LogViewState extends State<LogView> {
                   );
                 }
 
-                // 3. Menampilkan Data Nyata dari MongoDB Atlas
-                return ListView.builder(
-                  itemCount: currentLogs.length,
-                  itemBuilder: (context, index) {
-                    final log = currentLogs[index];
-                    return Dismissible(
-                      key: Key(log.id?.toHexString() ?? log.date),
-                      background: Container(
-                        color: Colors.red,
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
-                        child: const Icon(Icons.delete, color: Colors.white),
-                      ),
-                      confirmDismiss: (direction) async {
-                        return await showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text("Hapus Catatan?"),
-                            content: const Text(
-                              "Data akan dihapus permanen dari Cloud.",
+                // Homework 2: Pull-to-Refresh Indicator
+                return RefreshIndicator(
+                  onRefresh: _refreshData, // Memicu ulang Future
+                  child: ListView.builder(
+                    physics:
+                        const AlwaysScrollableScrollPhysics(), // Wajib agar selalu bisa ditarik
+                    itemCount: currentLogs.length,
+                    itemBuilder: (context, index) {
+                      final log = currentLogs[index];
+                      return Dismissible(
+                        key: Key(log.id?.toHexString() ?? log.date),
+                        background: Container(
+                          color: Colors.red,
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          child: const Icon(Icons.delete, color: Colors.white),
+                        ),
+                        confirmDismiss: (direction) async {
+                          return await showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text("Hapus Catatan?"),
+                              content: const Text(
+                                "Data akan dihapus permanen dari Cloud.",
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
+                                  child: const Text("Batal"),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  child: const Text("Hapus"),
+                                ),
+                              ],
                             ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text("Batal"),
+                          );
+                        },
+                        onDismissed: (dir) async {
+                          await MongoService().deleteLog(log.id!);
+                          _refreshData();
+                        },
+                        child: Card(
+                          color: _getCategoryColor(log.category),
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: ListTile(
+                            title: Text(
+                              log.title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text("Hapus"),
-                              ),
-                            ],
+                            ),
+                            // Homework 3: Badge Kategori dan Timestamp
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(log.description),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white54,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        log.category,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      _formatTimestamp(log.date),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey.shade700,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _showLogDialog(log: log),
+                            ),
                           ),
-                        );
-                      },
-                      onDismissed: (dir) async {
-                        await MongoService().deleteLog(log.id!);
-                        _refreshData(); // Task 3: Refresh setelah hapus
-                      },
-                      child: Card(
-                        color: _getCategoryColor(log.category),
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
                         ),
-                        child: ListTile(
-                          title: Text(
-                            log.title,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(log.description),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _showLogDialog(log: log),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 );
               },
             ),
