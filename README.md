@@ -95,6 +95,41 @@ Pada modul ini, aplikasi bertransformasi dari sekadar penghitung angka menjadi a
 
 ---
 
+## ☁️ MODUL 4: Cloud Integration & Secure Workflow
+
+Pada modul ini, aplikasi melakukan migrasi penyimpanan dari memori lokal menuju **MongoDB Atlas Cloud Database**, dilengkapi dengan protokol keamanan dan integrasi *Asynchronous UI*.
+
+### Task 1: Tugas Pendahuluan
+**Fokus:** Pemahaman teoritis arsitektur *Client-Server*, keamanan kredensial, dan manajemen proses *asynchronous*.
+- [x] [cite_start]**Konsep Cloud:** Memahami perbedaan *Client-Side Application* dan *Database Server*[cite: 853].
+- [x] [cite_start]**Environment:** Memahami urgensi penggunaan file `.env` dan `.gitignore` untuk melindungi kredensial[cite: 854].
+- [x] [cite_start]**Analisis:** Mengetahui perbedaan penggunaan `Future` dan `Stream` dalam mengambil data dari MongoDB[cite: 855, 856].
+
+### Task 2: The Cloud Connector (LOTS)
+**Fokus:** Migrasi model data dan verifikasi koneksi Cloud.
+- [x] [cite_start]**ObjectId Integration:** Meng-update `LogModel` agar mendukung tipe data `ObjectId` dan mampu melakukan mapping `_id` dari BSON MongoDB[cite: 860, 865].
+- [x] [cite_start]**Service Singleton:** Implementasi `MongoService` dengan pola *Singleton* untuk fungsi `connect()` dan `close()`[cite: 861].
+- [x] [cite_start]**Smoke Testing:** Berhasil terhubung ke Cluster Atlas melalui *Unit Test* tanpa browser dan mengisi `.env` dengan `MONGODB_URI` yang valid[cite: 862, 866, 867].
+
+### Task 3: Async-Reactive Flow (MOTS)
+**Fokus:** Menangani latensi jaringan dengan UI yang informatif.
+- [x] [cite_start]**Future-Based UI:** Mengubah `log_view.dart` agar menggunakan `FutureBuilder` yang memanggil `MongoService().getLogs()`[cite: 871].
+- [x] [cite_start]**Loading State & Data Check:** UI tidak *freeze* saat mengambil data (menggunakan `CircularProgressIndicator`) dan muncul pesan "Data Kosong" jika belum ada dokumen di koleksi MongoDB[cite: 872, 875, 877].
+- [x] [cite_start]**Auto-Refresh:** UI otomatis melakukan *fetch* ulang (Refresh) ke Cloud setiap kali pengguna menambah atau menghapus data[cite: 873].
+
+### Task 4: Professional Audit Logging (HOTS)
+**Fokus:** Menerapkan sistem audit trail yang bisa dikendalikan melalui konfigurasi eksternal.
+- [x] [cite_start]**Smart Logger:** Integrasi `LogHelper` pada setiap fungsi CRUD di dalam `MongoService`[cite: 881].
+- [x] [cite_start]**Verbosity Control & File Logging:** Log muncul sesuai `LOG_LEVEL` di `.env` dan berhasil otomatis membuat file log per tanggal (`dd-mm-yyyy.log`) di folder `/logs`[cite: 882, 885, 886].
+- [x] [cite_start]**Source Filtering:** Mengimplementasikan fitur `LOG_MUTE` di `.env` untuk mematikan log dari file tertentu[cite: 883].
+
+### Homework Cosmetic & UX Enhancement (30%)
+- [x] [cite_start]**Connection Guard:** Menampilkan *Offline Mode Warning* warna merah jika aplikasi gagal menghubungi server MongoDB saat internet terputus[cite: 889].
+- [x] [cite_start]**Pull-to-Refresh:** Integrasi widget `RefreshIndicator` agar pengguna bisa melakukan *fetch* ulang manual dengan cara menggeser layar ke bawah[cite: 890].
+- [x] [cite_start]**Timestamp Formatting:** Memanfaatkan library `intl` untuk format waktu lokal yang lebih manusiawi (contoh: "Baru saja", "12 menit yang lalu", atau "25 Jan 2026")[cite: 891].
+
+---
+
 ## 📸 Screenshots
 
 ### Modul 1: Counter & Logic
@@ -112,6 +147,11 @@ Pada modul ini, aplikasi bertransformasi dari sekadar penghitung angka menjadi a
 |:---:|:---:|:---:|
 | ![Edit View](gambar_praktikum/IMG6.jpeg) | ![Add View](gambar_praktikum/IMG4.jpeg) | ![Swipe to delete](gambar_praktikum/Gambar9.png) |
 
+### Modul 4: Cloud Integration & Secure Workflow
+| Data Terhubung MongoDB Atlas | Offline Connection Guard |
+|:---:|:---:|:---:|
+| ![Cloud Data View](gambar_praktikum/IMG7.jpeg) | ![Offline Guard](gambar_praktikum/IMG9.jpeg) |
+
 ---
 ## 🧠 Self Reflection (Lesson Learnt)
 
@@ -127,3 +167,8 @@ Prinsip SRP membuat logika counter dan pencatatan riwayat terpisah di `CounterCo
 1. **Konsep Baru:** Baru menyadari kekuatan sebenarnya dari Reactive Programming di Flutter. Penggunaan kombinasi `ValueNotifier` dan `ValueListenableBuilder` ternyata memungkinkan antarmuka (UI) untuk diperbarui secara otomatis ketika ada perubahan data tanpa perlu memanggil `setState()` berulang kali.
 2. **Kemenangan Kecil:** Berhasil membuat fungsionalitas CRUD berjalan mulus dengan UI yang dinamis, serta sukses menghilangkan warning garis kuning terkait penggunaan `BuildContext` di dalam fungsi asynchronous (async/await) hanya dengan menambahkan baris pengecekan `if (!mounted)`.
 3. **Target Berikutnya:** Ingin mempelajari cara menghubungkan aplikasi logbook ini ke layanan Backend-as-a-Service (BaaS) seperti Supabase atau MongoDB atau membuat REST API sendiri. Tujuannya agar data tidak hanya tersimpan secara lokal di memori HP, tetapi juga bisa tersinkronisasi dan diakses melalui cloud.
+
+### Modul 4
+1. **Konsep Baru:** Saya baru benar-benar memahami pentingnya arsitektur pengamanan lingkungan menggunakan file `.env` dan penerapan **Pola Singleton** dalam mengelola layanan Cloud. Penggunaan `ObjectId` juga mengubah cara pandang saya mengenai pemetaan kunci unik antara objek Dart dan dokumen BSON di database NoSQL.
+2. **Kemenangan Kecil:** Berhasil mendiagnosis dan memecahkan kendala koneksi *Timeout* yang disebabkan oleh pemblokiran di *IP Whitelist* MongoDB Atlas, serta sukses merestorasi UI (*Assertion Error*) yang sempat berantakan agar *Greeting*, fitur *Search*, dan indikator kategori kembali berjalan normal bersamaan dengan latensi *FutureBuilder*.
+3. **Target Berikutnya:** Setelah sukses mengintegrasikan arsitektur database *Cloud* dan penanganan performa asinkron (Pull-to-Refresh & Connection Guard), target saya selanjutnya adalah mendalami cara menerapkan *Real-time Stream* (WebSocket) agar aplikasi tidak perlu direfresh manual saat ada data masuk dari perangkat lain.
