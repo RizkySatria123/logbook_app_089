@@ -80,7 +80,9 @@ class LogController {
     String category, {
     String authorId = "unknown_user",
     String teamId = "no_team",
+    bool isPublic = false,
   }) async {
+    // Tambahan isPublic
     final newLog = LogModel(
       id: ObjectId().toHexString(),
       title: title,
@@ -89,15 +91,12 @@ class LogController {
       category: category,
       authorId: authorId,
       teamId: teamId,
-      isPublic: false,
+      isPublic: isPublic, // Gunakan nilai dari parameter
     );
 
-    // INSTAN KE LOKAL: Layar akan langsung bereaksi tanpa menunggu internet
     await _myBox.add(newLog);
     logsNotifier.value = [...logsNotifier.value, newLog];
 
-    // PERBAIKAN: Hilangkan kata 'await' di sini (Fire-and-Forget).
-    // Ini membuat aplikasimu tidak akan nge-freeze 15 detik saat offline!
     MongoService().insertLog(newLog).catchError((e) {
       LogHelper.writeLog(
         "Tersimpan offline, menunggu auto-sync.",
@@ -112,8 +111,10 @@ class LogController {
     int index,
     String title,
     String desc,
-    String category,
-  ) async {
+    String category, {
+    bool isPublic = false,
+  }) async {
+    // Tambahan isPublic
     final oldLog = logsNotifier.value[index];
     final updatedLog = LogModel(
       id: oldLog.id,
@@ -123,7 +124,7 @@ class LogController {
       category: category,
       authorId: oldLog.authorId,
       teamId: oldLog.teamId,
-      isPublic: oldLog.isPublic,
+      isPublic: isPublic, // Gunakan nilai dari parameter
     );
 
     await _myBox.putAt(index, updatedLog);
@@ -131,7 +132,6 @@ class LogController {
     newList[index] = updatedLog;
     logsNotifier.value = newList;
 
-    // PERBAIKAN: Fire-and-Forget
     MongoService().updateLog(updatedLog).catchError((_) {});
   }
 

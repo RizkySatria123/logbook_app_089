@@ -7,7 +7,7 @@ class LogEditorPage extends StatefulWidget {
   final LogModel? log;
   final int? index;
   final LogController controller;
-  final String username; // Pengganti currentUser untuk sementara
+  final String username;
 
   const LogEditorPage({
     super.key,
@@ -25,6 +25,7 @@ class _LogEditorPageState extends State<LogEditorPage> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
   late String _selectedCategory;
+  bool _isPublic = false; // TASK 5: Status privasi
 
   final List<String> _categories = ['Pekerjaan', 'Pribadi', 'Urgent'];
 
@@ -36,6 +37,8 @@ class _LogEditorPageState extends State<LogEditorPage> {
       text: widget.log?.description ?? '',
     );
     _selectedCategory = widget.log?.category ?? 'Pribadi';
+    _isPublic =
+        widget.log?.isPublic ?? false; // Ambil data lama jika sedang edit
 
     _descController.addListener(() {
       setState(() {});
@@ -44,24 +47,24 @@ class _LogEditorPageState extends State<LogEditorPage> {
 
   void _save() async {
     if (widget.log == null) {
-      // Simpan Baru
       await widget.controller.addLog(
         _titleController.text,
         _descController.text,
         _selectedCategory,
         authorId: widget.username,
         teamId: "KELOMPOK_1",
+        isPublic: _isPublic, // Kirim isPublic
       );
     } else {
-      // Update Lama
       await widget.controller.updateLog(
         widget.index!,
         _titleController.text,
         _descController.text,
         _selectedCategory,
+        isPublic: _isPublic, // Kirim isPublic
       );
     }
-    if (mounted) Navigator.pop(context); // Kembali ke halaman sebelumnya
+    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -93,7 +96,6 @@ class _LogEditorPageState extends State<LogEditorPage> {
         ),
         body: TabBarView(
           children: [
-            // TAB 1: AREA KETIK (EDITOR)
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -101,7 +103,7 @@ class _LogEditorPageState extends State<LogEditorPage> {
                   TextField(
                     controller: _titleController,
                     decoration: const InputDecoration(
-                      labelText: "Judul Catatan",
+                      labelText: "Judul",
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -118,16 +120,30 @@ class _LogEditorPageState extends State<LogEditorPage> {
                     onChanged: (v) => setState(() => _selectedCategory = v!),
                   ),
                   const SizedBox(height: 12),
+                  // TASK 5: SAKLAR PRIVASI
+                  SwitchListTile(
+                    title: const Text(
+                      "Publikasikan Catatan",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      _isPublic
+                          ? "Semua orang di tim bisa melihat ini"
+                          : "Hanya Anda yang bisa melihat ini",
+                    ),
+                    value: _isPublic,
+                    activeColor: Colors.green,
+                    onChanged: (val) => setState(() => _isPublic = val),
+                  ),
+                  const SizedBox(height: 12),
                   Expanded(
                     child: TextField(
                       controller: _descController,
                       maxLines: null,
                       expands: true,
-                      keyboardType: TextInputType.multiline,
                       textAlignVertical: TextAlignVertical.top,
                       decoration: const InputDecoration(
-                        hintText:
-                            "Tulis laporanmu di sini...\n\nBisa pakai Markdown loh!\n# Judul Besar\n**Teks Tebal**\n- List Item",
+                        hintText: "Tulis laporanmu di sini... (Bisa Markdown)",
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -135,7 +151,6 @@ class _LogEditorPageState extends State<LogEditorPage> {
                 ],
               ),
             ),
-            // TAB 2: HASIL RENDER MARKDOWN (PRATINJAU)
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: _descController.text.isEmpty

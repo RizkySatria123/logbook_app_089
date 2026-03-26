@@ -239,7 +239,13 @@ class _LogViewState extends State<LogView> {
             child: ValueListenableBuilder<List<LogModel>>(
               valueListenable: _controller.filteredLogsNotifier,
               builder: (context, currentLogs, _) {
-                if (currentLogs.isEmpty) {
+                // --- TASK 5 MULAI: FILTER VISIBILITAS ---
+                final displayLogs = currentLogs.where((log) {
+                  return log.authorId == widget.username ||
+                      log.isPublic == true;
+                }).toList();
+
+                if (displayLogs.isEmpty) {
                   return const Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -261,9 +267,9 @@ class _LogViewState extends State<LogView> {
                   child: ListView.builder(
                     physics:
                         const AlwaysScrollableScrollPhysics(), // Wajib agar selalu bisa ditarik
-                    itemCount: currentLogs.length,
+                    itemCount: displayLogs.length,
                     itemBuilder: (context, index) {
-                      final log = currentLogs[index];
+                      final log = displayLogs[index];
 
                       // Pengecekan Gatekeeper (RBAC)
                       bool isOwner = log.authorId == widget.username;
@@ -360,22 +366,39 @@ class _LogViewState extends State<LogView> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white54,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        log.category,
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
+                                    Row(
+                                      children: [
+                                        //  BADGE PRIVASI (IKON) ---
+                                        Icon(
+                                          log.isPublic
+                                              ? Icons.public
+                                              : Icons.lock,
+                                          size: 14,
+                                          color: log.isPublic
+                                              ? Colors.blue
+                                              : Colors.red,
                                         ),
-                                      ),
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white54,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            log.category,
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     Text(
                                       _formatTimestamp(log.date),
