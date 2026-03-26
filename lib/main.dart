@@ -1,9 +1,10 @@
-// main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import dotenv
 import 'package:logbook_app_089/services/mongo_service.dart'; // Import MongoService
 import 'package:logbook_app_089/helpers/log_helper.dart'; // Import LogHelper
 import 'package:logbook_app_089/features/onboarding/onboarding_view.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:logbook_app_089/features/logbook/models/log_model.dart';
 
 void main() async {
   // Pastikan binding Flutter sudah siap sebelum menjalankan kode async
@@ -13,11 +14,20 @@ void main() async {
     // 1. Muat konfigurasi dari file .env
     await dotenv.load(fileName: ".env");
 
-    // 2. Inisialisasi koneksi ke MongoDB Atlas
+    // --- 2. TAMBAHAN INISIALISASI HIVE (MODUL 5) ---
+    await Hive.initFlutter(); // Menyalakan mesin database lokal
+    Hive.registerAdapter(
+      LogModelAdapter(),
+    ); // Mengenalkan bentuk LogModel ke Hive
+    await Hive.openBox<LogModel>(
+      'offline_logs',
+    ); // Membuka brankas data bernama 'offline_logs'
+
+    // 3. Inisialisasi koneksi ke MongoDB Atlas (Dari Modul 4)
     await MongoService().connect();
 
     await LogHelper.writeLog(
-      "Aplikasi berhasil dimulai dengan koneksi Database",
+      "Aplikasi berhasil dimulai dengan koneksi Database dan Hive",
       source: "main.dart",
     );
   } catch (e) {

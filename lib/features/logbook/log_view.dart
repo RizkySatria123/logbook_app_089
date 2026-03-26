@@ -18,7 +18,6 @@ class _LogViewState extends State<LogView> {
   final TextEditingController _contentController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
 
-  Future<List<LogModel>>? _logFuture;
   bool _isOffline = false; // Homework 1: Status untuk Connection Guard
 
   @override
@@ -27,14 +26,13 @@ class _LogViewState extends State<LogView> {
     _refreshData();
   }
 
-  // Homework 1 & 2: Diperbarui dengan Connection Guard [cite: 889, 890]
+  // Diperbarui dengan Connection Guard
   Future<void> _refreshData() async {
-    setState(() => _isOffline = false); // Reset status offline saat ditarik
-
+    setState(() => _isOffline = false);
     try {
-      await MongoService().connect(); // Memastikan koneksi sebelum fetch
+      await MongoService().connect();
     } catch (e) {
-      setState(() => _isOffline = true); // Munculkan banner merah jika gagal
+      setState(() => _isOffline = true);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -44,10 +42,8 @@ class _LogViewState extends State<LogView> {
         );
       }
     }
-
-    setState(() {
-      _logFuture = MongoService().getLogs();
-    });
+    // Memuat Hive & Cloud
+    await _controller.fetchLogsFromDB();
   }
 
   String get _greeting {
@@ -146,20 +142,25 @@ class _LogViewState extends State<LogView> {
             ElevatedButton(
               onPressed: () async {
                 if (isEdit) {
-                  await MongoService().updateLog(
-                    LogModel(
-                      id: log.id,
-                      title: _titleController.text,
-                      description: _contentController.text,
-                      category: selectedCategory,
-                      date: log.date,
-                    ),
-                  );
+                  // Jika Edit, asumsikan index didapat dari controller (untuk sementara kita update via Hive/Cloud directly)
+                  // Note: Idealnya _showLogDialog menerima index, tapi kita sesuaikan dengan fungsi updateLog yg butuh parameter baru.
+                  // Untuk kesederhanaan, kita gunakan cara instan lewat controller di versi ini.
+                  final index = _controller.logsNotifier.value.indexOf(log);
+                  if (index != -1) {
+                    await _controller.updateLog(
+                      index,
+                      _titleController.text,
+                      _contentController.text,
+                      selectedCategory,
+                    );
+                  }
                 } else {
                   await _controller.addLog(
                     _titleController.text,
                     _contentController.text,
                     selectedCategory,
+                    authorId: widget.username,
+                    teamId: "KELOMPOK_1",
                   );
                 }
                 if (context.mounted) Navigator.pop(context);
@@ -230,7 +231,8 @@ class _LogViewState extends State<LogView> {
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
-              onChanged: (v) => setState(() {}),
+              // PERBAIKAN: Hubungkan pencarian ke controller, bukan sekadar setState kosong
+              onChanged: (v) => _controller.searchLog(v),
               decoration: InputDecoration(
                 hintText: "Cari Catatan...",
                 prefixIcon: const Icon(Icons.search),
@@ -243,36 +245,10 @@ class _LogViewState extends State<LogView> {
             ),
           ),
           Expanded(
-            child: FutureBuilder<List<LogModel>>(
-              future: _logFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text("Menghubungkan ke MongoDB Atlas..."),
-                      ],
-                    ),
-                  );
-                }
-
-                if (snapshot.hasError) {
-                  return Center(child: Text("Error: ${snapshot.error}"));
-                }
-
-                final allLogs = snapshot.data ?? [];
-                final query = _searchController.text.toLowerCase();
-                final currentLogs = allLogs
-                    .where(
-                      (log) =>
-                          log.title.toLowerCase().contains(query) ||
-                          log.description.toLowerCase().contains(query),
-                    )
-                    .toList();
-
+            // PERBAIKAN UTAMA: Menggunakan ValueListenableBuilder dengan benar
+            child: ValueListenableBuilder<List<LogModel>>(
+              valueListenable: _controller.filteredLogsNotifier,
+              builder: (context, currentLogs, _) {
                 if (currentLogs.isEmpty) {
                   return const Center(
                     child: Column(
@@ -291,7 +267,7 @@ class _LogViewState extends State<LogView> {
 
                 // Homework 2: Pull-to-Refresh Indicator
                 return RefreshIndicator(
-                  onRefresh: _refreshData, // Memicu ulang Future
+                  onRefresh: _refreshData,
                   child: ListView.builder(
                     physics:
                         const AlwaysScrollableScrollPhysics(), // Wajib agar selalu bisa ditarik
@@ -299,7 +275,7 @@ class _LogViewState extends State<LogView> {
                     itemBuilder: (context, index) {
                       final log = currentLogs[index];
                       return Dismissible(
-                        key: Key(log.id?.toHexString() ?? log.date),
+                        key: Key(log.id ?? log.date),
                         background: Container(
                           color: Colors.red,
                           alignment: Alignment.centerRight,
@@ -312,7 +288,7 @@ class _LogViewState extends State<LogView> {
                             builder: (context) => AlertDialog(
                               title: const Text("Hapus Catatan?"),
                               content: const Text(
-                                "Data akan dihapus permanen dari Cloud.",
+                                "Data akan dihapus permanen dari Lokal & Cloud.",
                               ),
                               actions: [
                                 TextButton(
@@ -329,8 +305,8 @@ class _LogViewState extends State<LogView> {
                           );
                         },
                         onDismissed: (dir) async {
-                          await MongoService().deleteLog(log.id!);
-                          _refreshData();
+                          // PERBAIKAN: Gunakan controller agar terhapus di Lokal (Hive) dan Cloud sekaligus
+                          await _controller.removeLog(log);
                         },
                         child: Card(
                           color: _getCategoryColor(log.category),
