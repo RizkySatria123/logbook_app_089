@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:logbook_app_089/features/logbook/models/log_model.dart';
 import 'package:logbook_app_089/services/mongo_service.dart';
 import 'package:logbook_app_089/helpers/log_helper.dart';
-import 'package:mongo_dart/mongo_dart.dart'
-    show ObjectId; // Untuk membuat ID unik lokal
+import 'package:mongo_dart/mongo_dart.dart' show ObjectId;
 
 class LogController {
   final ValueNotifier<List<LogModel>> logsNotifier = ValueNotifier([]);
@@ -18,12 +18,53 @@ class LogController {
     _myBox = Hive.box<LogModel>('offline_logs');
     _syncFilteredLogs();
     fetchLogsFromDB(); // Otomatis load data saat controller dipanggil
+
+    Connectivity().onConnectivityChanged.listen((
+      List<ConnectivityResult> results,
+    ) {
+      // Jika hasil tidak kosong dan BUKAN "none" (artinya internet nyala)
+      if (results.isNotEmpty && !results.contains(ConnectivityResult.none)) {
+        _syncPendingDataToCloud();
+      }
+    });
   }
 
   void _syncFilteredLogs() {
     logsNotifier.addListener(() {
       filteredLogsNotifier.value = logsNotifier.value;
     });
+  }
+
+  Future<void> _syncPendingDataToCloud() async {
+    await LogHelper.writeLog(
+      "INTERNET AKTIF: Mengecek data lokal yang belum tersinkron...",
+      source: _source,
+      level: 3,
+    );
+
+    final localData = _myBox.values.toList();
+    if (localData.isEmpty) return;
+
+    // Loop semua data lokal dan coba kirim ke Atlas
+    for (var log in localData) {
+      try {
+        await MongoService().insertLog(log);
+        await LogHelper.writeLog(
+          "AUTO-SYNC SUCCESS: Log '${log.title}' berhasil didorong ke Cloud",
+          source: _source,
+          level: 2,
+        );
+      } catch (e) {
+        // Jika error (biasanya karena data sudah ada/duplicate ID), abaikan saja secara diam-diam
+        await LogHelper.writeLog(
+          "AUTO-SYNC SKIP: Log '${log.title}' sudah ada di Cloud",
+          source: _source,
+          level: 3,
+        );
+      }
+    }
+    // Refresh UI untuk memastikan keselarasan
+    await fetchLogsFromDB();
   }
 
   // --- 1. LOAD DATA (Offline-First Strategy) ---
@@ -97,7 +138,7 @@ class LogController {
       );
     } catch (e) {
       await LogHelper.writeLog(
-        "WARNING: Gagal sinkron ke Cloud, tersimpan di lokal",
+        "WARNING: Gagal sinkron ke Cloud, tersimpan di lokal (Menunggu Auto-Sync)",
         source: _source,
         level: 1,
       );
