@@ -10,19 +10,17 @@ class LogController {
   final ValueNotifier<List<LogModel>> logsNotifier = ValueNotifier([]);
   final ValueNotifier<List<LogModel>> filteredLogsNotifier = ValueNotifier([]);
 
-  // Akses ke brankas lokal Hive yang sudah dibuka di main.dart
   late final Box<LogModel> _myBox;
   final String _source = "log_controller.dart";
 
   LogController() {
     _myBox = Hive.box<LogModel>('offline_logs');
     _syncFilteredLogs();
-    fetchLogsFromDB(); // Otomatis load data saat controller dipanggil
+    fetchLogsFromDB();
 
     Connectivity().onConnectivityChanged.listen((
       List<ConnectivityResult> results,
     ) {
-      // Jika hasil tidak kosong dan BUKAN "none" (artinya internet nyala)
       if (results.isNotEmpty && !results.contains(ConnectivityResult.none)) {
         _syncPendingDataToCloud();
       }
@@ -36,75 +34,46 @@ class LogController {
   }
 
   Future<void> _syncPendingDataToCloud() async {
-    await LogHelper.writeLog(
-      "INTERNET AKTIF: Mengecek data lokal yang belum tersinkron...",
-      source: _source,
-      level: 3,
-    );
-
     final localData = _myBox.values.toList();
     if (localData.isEmpty) return;
 
-    // Loop semua data lokal dan coba kirim ke Atlas
     for (var log in localData) {
       try {
         await MongoService().insertLog(log);
-        await LogHelper.writeLog(
-          "AUTO-SYNC SUCCESS: Log '${log.title}' berhasil didorong ke Cloud",
-          source: _source,
-          level: 2,
-        );
       } catch (e) {
-        // Jika error (biasanya karena data sudah ada/duplicate ID), abaikan saja secara diam-diam
-        await LogHelper.writeLog(
-          "AUTO-SYNC SKIP: Log '${log.title}' sudah ada di Cloud",
-          source: _source,
-          level: 3,
-        );
+        // Abaikan secara diam-diam jika data sudah ada di Cloud
       }
     }
-    // Refresh UI untuk memastikan keselarasan
     await fetchLogsFromDB();
   }
 
-  // --- 1. LOAD DATA (Offline-First Strategy) ---
+  // --- 1. LOAD DATA ---
   Future<void> fetchLogsFromDB() async {
-    // ACTION 1: Ambil data dari Hive (Instan tanpa butuh internet)
     final localData = _myBox.values.toList();
     if (localData.isNotEmpty) {
       logsNotifier.value = localData;
-      await LogHelper.writeLog(
-        "OFFLINE: Memuat ${localData.length} data dari Hive",
-        source: _source,
-        level: 2,
-      );
     }
 
-    // ACTION 2: Sync dari Cloud (Background)
     try {
-      final cloudData = await MongoService().getLogs();
+      // PERBAIKAN FATAL: Dorong data lokal ke Cloud DULU sebelum Cloud menimpa Hive!
+      // Ini mencegah hilangnya catatan offline.
+      for (var log in localData) {
+        try {
+          await MongoService().insertLog(log);
+        } catch (_) {}
+      }
 
-      // Update Hive dengan data terbaru dari Cloud agar sinkron
+      // Setelah aman, baru tarik data terbaru dari Cloud dan timpa lokal
+      final cloudData = await MongoService().getLogs();
       await _myBox.clear();
       await _myBox.addAll(cloudData);
-
-      // Update UI dengan data Cloud
       logsNotifier.value = cloudData;
-      await LogHelper.writeLog(
-        "SYNC: Data berhasil diperbarui dari MongoDB Atlas",
-        source: _source,
-        level: 2,
-      );
     } catch (e) {
-      await LogHelper.writeLog(
-        "OFFLINE MODE: Menggunakan data cache lokal. (Error: $e)",
-        source: _source,
-        level: 1,
-      );
+      // Biarkan error jika offline, data lokal tetap aman di layar
     }
   }
 
-  // --- 2. ADD DATA (Instant Local + Background Cloud) ---
+  // --- 2. ADD DATA ---
   Future<void> addLog(
     String title,
     String desc,
@@ -113,8 +82,7 @@ class LogController {
     String teamId = "no_team",
   }) async {
     final newLog = LogModel(
-      id: ObjectId()
-          .toHexString(), // Buat ID langsung agar bisa disimpan di lokal
+      id: ObjectId().toHexString(),
       title: title,
       description: desc,
       date: DateTime.now().toIso8601String(),
@@ -124,25 +92,19 @@ class LogController {
       isPublic: false,
     );
 
-    // ACTION 1: Simpan ke Hive (Instan)
+    // INSTAN KE LOKAL: Layar akan langsung bereaksi tanpa menunggu internet
     await _myBox.add(newLog);
-    logsNotifier.value = [...logsNotifier.value, newLog]; // Update UI
+    logsNotifier.value = [...logsNotifier.value, newLog];
 
-    // ACTION 2: Kirim ke MongoDB Atlas (Background)
-    try {
-      await MongoService().insertLog(newLog);
-      await LogHelper.writeLog(
-        "SUCCESS: Log '${newLog.title}' tersinkron ke Cloud",
-        source: _source,
-        level: 2,
-      );
-    } catch (e) {
-      await LogHelper.writeLog(
-        "WARNING: Gagal sinkron ke Cloud, tersimpan di lokal (Menunggu Auto-Sync)",
+    // PERBAIKAN: Hilangkan kata 'await' di sini (Fire-and-Forget).
+    // Ini membuat aplikasimu tidak akan nge-freeze 15 detik saat offline!
+    MongoService().insertLog(newLog).catchError((e) {
+      LogHelper.writeLog(
+        "Tersimpan offline, menunggu auto-sync.",
         source: _source,
         level: 1,
       );
-    }
+    });
   }
 
   // --- 3. UPDATE DATA ---
@@ -164,46 +126,28 @@ class LogController {
       isPublic: oldLog.isPublic,
     );
 
-    // ACTION 1: Update di Lokal
     await _myBox.putAt(index, updatedLog);
     final List<LogModel> newList = List.from(logsNotifier.value);
     newList[index] = updatedLog;
     logsNotifier.value = newList;
 
-    // ACTION 2: Update di Cloud
-    try {
-      await MongoService().updateLog(updatedLog);
-    } catch (e) {
-      await LogHelper.writeLog(
-        "WARNING: Update gagal di Cloud, tersimpan di lokal",
-        source: _source,
-        level: 1,
-      );
-    }
+    // PERBAIKAN: Fire-and-Forget
+    MongoService().updateLog(updatedLog).catchError((_) {});
   }
 
   // --- 4. REMOVE DATA ---
   Future<void> removeLog(LogModel logToRemove) async {
     final index = logsNotifier.value.indexOf(logToRemove);
     if (index != -1) {
-      // ACTION 1: Hapus di Lokal
       await _myBox.deleteAt(index);
       final List<LogModel> newList = List.from(logsNotifier.value);
       newList.removeAt(index);
       logsNotifier.value = newList;
     }
 
-    // ACTION 2: Hapus di Cloud
     if (logToRemove.id != null) {
-      try {
-        await MongoService().deleteLog(logToRemove.id!);
-      } catch (e) {
-        await LogHelper.writeLog(
-          "WARNING: Hapus gagal di Cloud",
-          source: _source,
-          level: 1,
-        );
-      }
+      // PERBAIKAN: Fire-and-Forget
+      MongoService().deleteLog(logToRemove.id!).catchError((_) {});
     }
   }
 
