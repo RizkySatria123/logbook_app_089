@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Homework 3: Tambahan untuk format waktu
+import 'package:intl/intl.dart';
 import 'package:logbook_app_089/features/logbook/log_controller.dart';
 import 'package:logbook_app_089/features/logbook/models/log_model.dart';
 import 'package:logbook_app_089/services/mongo_service.dart';
+import 'package:logbook_app_089/services/access_control_service.dart';
+import 'package:logbook_app_089/features/logbook/log_editor_page.dart';
+import 'package:logbook_app_089/features/auth/login_view.dart';
 
 class LogView extends StatefulWidget {
   final String username;
@@ -14,11 +17,9 @@ class LogView extends StatefulWidget {
 
 class _LogViewState extends State<LogView> {
   final LogController _controller = LogController();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _contentController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
 
-  bool _isOffline = false; // Homework 1: Status untuk Connection Guard
+  bool _isOffline = false; // Status untuk Connection Guard
 
   @override
   void initState() {
@@ -67,7 +68,7 @@ class _LogViewState extends State<LogView> {
     }
   }
 
-  // Homework 3: Logika format waktu lokal Indonesia
+  // Logika format waktu lokal Indonesia
   String _formatTimestamp(String isoDate) {
     if (isoDate.isEmpty) return "";
     try {
@@ -86,96 +87,33 @@ class _LogViewState extends State<LogView> {
     }
   }
 
-  void _showLogDialog({LogModel? log}) {
-    final isEdit = log != null;
-    String selectedCategory = isEdit ? log.category : 'Pribadi';
-    if (isEdit) {
-      _titleController.text = log.title;
-      _contentController.text = log.description;
-    } else {
-      _titleController.clear();
-      _contentController.clear();
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setStateDialog) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: Colors.lightBlueAccent, width: 3),
-          ),
-          title: Text(
-            isEdit ? "Edit Catatan" : "Tambah Catatan",
-            style: const TextStyle(
-              color: Colors.blue,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _titleController,
-                decoration: const InputDecoration(labelText: "Judul"),
-              ),
-              TextField(
-                controller: _contentController,
-                decoration: const InputDecoration(labelText: "Deskripsi"),
-              ),
-              const SizedBox(height: 12),
-              DropdownButton<String>(
-                value: selectedCategory,
-                isExpanded: true,
-                items: ['Pekerjaan', 'Pribadi', 'Urgent']
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
-                onChanged: (v) => setStateDialog(() => selectedCategory = v!),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Batal"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (isEdit) {
-                  // Jika Edit, asumsikan index didapat dari controller (untuk sementara kita update via Hive/Cloud directly)
-                  // Note: Idealnya _showLogDialog menerima index, tapi kita sesuaikan dengan fungsi updateLog yg butuh parameter baru.
-                  // Untuk kesederhanaan, kita gunakan cara instan lewat controller di versi ini.
-                  final index = _controller.logsNotifier.value.indexOf(log);
-                  if (index != -1) {
-                    await _controller.updateLog(
-                      index,
-                      _titleController.text,
-                      _contentController.text,
-                      selectedCategory,
-                    );
-                  }
-                } else {
-                  await _controller.addLog(
-                    _titleController.text,
-                    _contentController.text,
-                    selectedCategory,
-                    authorId: widget.username,
-                    teamId: "KELOMPOK_1",
-                  );
-                }
-                if (context.mounted) Navigator.pop(context);
-                _refreshData();
-              },
-              child: Text(isEdit ? "Update" : "Simpan"),
-            ),
-          ],
+  // Fungsi Navigasi ke Halaman Editor (Menggantikan _showLogDialog lama)
+  void _goToEditor({LogModel? log, int? index}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LogEditorPage(
+          log: log,
+          index: index,
+          controller: _controller,
+          username: widget.username,
         ),
       ),
-    );
+    ).then((_) {
+      // Refresh data setelah kembali dari editor
+      _refreshData();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    // Simulasi Role untuk RBAC berdasarkan username
+    String currentRole =
+        widget.username.toLowerCase().contains('ketua') ||
+            widget.username.toLowerCase().contains('admin')
+        ? 'Ketua'
+        : 'Anggota';
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -192,9 +130,9 @@ class _LogViewState extends State<LogView> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const Text(
-              "Logbook Activity - Cloud Mode",
-              style: TextStyle(color: Colors.white70, fontSize: 14),
+            Text(
+              "Logbook Activity - Role: $currentRole", // Menampilkan role saat ini
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
           ],
         ),
@@ -203,11 +141,63 @@ class _LogViewState extends State<LogView> {
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _refreshData,
           ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  title: const Row(
+                    children: [
+                      Icon(Icons.logout, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text("Konfirmasi Logout"),
+                    ],
+                  ),
+                  content: const Text(
+                    "Apakah Anda yakin ingin logout dari aplikasi?",
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.pop(context), // Tutup popup jika batal
+                      child: const Text(
+                        "Batal",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context); // Tutup popup dialog dulu
+                        // Arahkan kembali ke halaman Login dan hapus riwayat navigasi
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginView(),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      child: const Text(
+                        "Ya, Logout",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ],
       ),
       body: Column(
         children: [
-          // Homework 1: Connection Guard Banner
           if (_isOffline)
             Container(
               width: double.infinity,
@@ -231,7 +221,7 @@ class _LogViewState extends State<LogView> {
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
-              // PERBAIKAN: Hubungkan pencarian ke controller, bukan sekadar setState kosong
+              // Hubungkan pencarian ke controller
               onChanged: (v) => _controller.searchLog(v),
               decoration: InputDecoration(
                 hintText: "Cari Catatan...",
@@ -245,7 +235,7 @@ class _LogViewState extends State<LogView> {
             ),
           ),
           Expanded(
-            // PERBAIKAN UTAMA: Menggunakan ValueListenableBuilder dengan benar
+            // Menggunakan ValueListenableBuilder
             child: ValueListenableBuilder<List<LogModel>>(
               valueListenable: _controller.filteredLogsNotifier,
               builder: (context, currentLogs, _) {
@@ -265,7 +255,7 @@ class _LogViewState extends State<LogView> {
                   );
                 }
 
-                // Homework 2: Pull-to-Refresh Indicator
+                // Pull-to-Refresh Indicator
                 return RefreshIndicator(
                   onRefresh: _refreshData,
                   child: ListView.builder(
@@ -274,8 +264,26 @@ class _LogViewState extends State<LogView> {
                     itemCount: currentLogs.length,
                     itemBuilder: (context, index) {
                       final log = currentLogs[index];
+
+                      // Pengecekan Gatekeeper (RBAC)
+                      bool isOwner = log.authorId == widget.username;
+                      bool canDelete = AccessControlService.canPerform(
+                        currentRole,
+                        AccessControlService.actionDelete,
+                        isOwner: isOwner,
+                      );
+                      bool canEdit = AccessControlService.canPerform(
+                        currentRole,
+                        AccessControlService.actionUpdate,
+                        isOwner: isOwner,
+                      );
+
                       return Dismissible(
                         key: Key(log.id ?? log.date),
+                        // Kunci fitur Swipe to Delete jika tidak memiliki izin
+                        direction: canDelete
+                            ? DismissDirection.endToStart
+                            : DismissDirection.none,
                         background: Container(
                           color: Colors.red,
                           alignment: Alignment.centerRight,
@@ -305,7 +313,7 @@ class _LogViewState extends State<LogView> {
                           );
                         },
                         onDismissed: (dir) async {
-                          // PERBAIKAN: Gunakan controller agar terhapus di Lokal (Hive) dan Cloud sekaligus
+                          // Gunakan controller agar terhapus di Lokal (Hive) dan Cloud sekaligus
                           await _controller.removeLog(log);
                         },
                         child: Card(
@@ -315,17 +323,38 @@ class _LogViewState extends State<LogView> {
                             vertical: 8,
                           ),
                           child: ListTile(
-                            title: Text(
-                              log.title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
+                            title: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    log.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                // Tampilkan nama author kecil di pojok kanan atas judul
+                                Text(
+                                  "by: ${log.authorId}",
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.purple,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
                             ),
-                            // Homework 3: Badge Kategori dan Timestamp
+                            // Badge Kategori dan Timestamp
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(log.description),
+                                Text(
+                                  log.description,
+                                  maxLines:
+                                      2, // Batasi teks panjang agar kartu rapi
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                                 const SizedBox(height: 6),
                                 Row(
                                   mainAxisAlignment:
@@ -360,10 +389,16 @@ class _LogViewState extends State<LogView> {
                                 ),
                               ],
                             ),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () => _showLogDialog(log: log),
-                            ),
+                            trailing: canEdit
+                                ? IconButton(
+                                    icon: const Icon(
+                                      Icons.edit,
+                                      color: Colors.blue,
+                                    ),
+                                    onPressed: () =>
+                                        _goToEditor(log: log, index: index),
+                                  )
+                                : const SizedBox.shrink(),
                           ),
                         ),
                       );
@@ -376,11 +411,12 @@ class _LogViewState extends State<LogView> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showLogDialog(),
-        backgroundColor: Colors.green,
+        // Arahkan tombol tambah ke halaman editor baru
+        onPressed: () => _goToEditor(),
+        backgroundColor: Colors.green, // Mempertahankan warna asli pilihanmu
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text(
-          "Add catatan",
+          "Add catatan", // Mempertahankan teks pilihanmu
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
