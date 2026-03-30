@@ -19,7 +19,7 @@ class _LogViewState extends State<LogView> {
   final LogController _controller = LogController();
   final TextEditingController _searchController = TextEditingController();
 
-  bool _isOffline = false; // Status untuk Connection Guard
+  bool _isOffline = false;
 
   @override
   void initState() {
@@ -27,7 +27,6 @@ class _LogViewState extends State<LogView> {
     _refreshData();
   }
 
-  // Diperbarui dengan Connection Guard
   Future<void> _refreshData() async {
     setState(() => _isOffline = false);
     try {
@@ -36,14 +35,23 @@ class _LogViewState extends State<LogView> {
       setState(() => _isOffline = true);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Offline Mode: Gagal terhubung ke MongoDB Atlas."),
-            backgroundColor: Colors.redAccent,
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.wifi_off, color: Colors.white),
+                SizedBox(width: 10),
+                Text("Offline Mode: Memuat data lokal."),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
     }
-    // Memuat Hive & Cloud
     await _controller.fetchLogsFromDB();
   }
 
@@ -55,20 +63,20 @@ class _LogViewState extends State<LogView> {
     return 'Selamat Malam';
   }
 
+  // Warna Card dibuat sedikit lebih pastel dan estetik
   Color _getCategoryColor(String category) {
     switch (category) {
       case 'Pekerjaan':
-        return Colors.blue.shade100;
+        return const Color(0xFFE3F2FD); // Light Blue
       case 'Urgent':
-        return Colors.red.shade100;
+        return const Color(0xFFFFEBEE); // Light Red
       case 'Pribadi':
-        return Colors.green.shade100;
+        return const Color(0xFFE8F5E9); // Light Green
       default:
         return Colors.white;
     }
   }
 
-  // Logika format waktu lokal Indonesia
   String _formatTimestamp(String isoDate) {
     if (isoDate.isEmpty) return "";
     try {
@@ -81,13 +89,12 @@ class _LogViewState extends State<LogView> {
       if (diff.inHours < 24) return "${diff.inHours} jam yang lalu";
       if (diff.inDays < 7) return "${diff.inDays} hari yang lalu";
 
-      return DateFormat('dd MMM yyyy').format(date); // Butuh library intl
+      return DateFormat('dd MMM yyyy').format(date);
     } catch (e) {
       return isoDate;
     }
   }
 
-  // Fungsi Navigasi ke Halaman Editor (Menggantikan _showLogDialog lama)
   void _goToEditor({LogModel? log, int? index}) {
     Navigator.push(
       context,
@@ -100,14 +107,12 @@ class _LogViewState extends State<LogView> {
         ),
       ),
     ).then((_) {
-      // Refresh data setelah kembali dari editor
       _refreshData();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Simulasi Role untuk RBAC berdasarkan username
     String currentRole =
         widget.username.toLowerCase().contains('ketua') ||
             widget.username.toLowerCase().contains('admin')
@@ -115,10 +120,25 @@ class _LogViewState extends State<LogView> {
         : 'Anggota';
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(
+        0xFFF5F7FA,
+      ), // Background abu-abu kebiruan sangat muda
       appBar: AppBar(
-        toolbarHeight: 80,
-        backgroundColor: const Color(0xFF1976D2),
+        toolbarHeight: 85, // Sedikit lebih tinggi agar lega
+        elevation: 0,
+        // UI POLISH: Efek Gradasi pada AppBar
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF1565C0),
+                Color(0xFF42A5F5),
+              ], // Gradasi Biru Gelap ke Terang
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -126,13 +146,26 @@ class _LogViewState extends State<LogView> {
               "$_greeting, ${widget.username}!",
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
               ),
             ),
-            Text(
-              "Logbook Activity - Role: $currentRole", // Menampilkan role saat ini
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                "Role: $currentRole",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ],
         ),
@@ -148,22 +181,24 @@ class _LogViewState extends State<LogView> {
                 context: context,
                 builder: (context) => AlertDialog(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   title: const Row(
                     children: [
-                      Icon(Icons.logout, color: Colors.red),
+                      Icon(Icons.logout, color: Colors.redAccent),
                       SizedBox(width: 8),
-                      Text("Konfirmasi Logout"),
+                      Text(
+                        "Logout",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                   content: const Text(
-                    "Apakah Anda yakin ingin logout dari aplikasi?",
+                    "Apakah Anda yakin ingin keluar dari sesi ini?",
                   ),
                   actions: [
                     TextButton(
-                      onPressed: () =>
-                          Navigator.pop(context), // Tutup popup jika batal
+                      onPressed: () => Navigator.pop(context),
                       child: const Text(
                         "Batal",
                         style: TextStyle(color: Colors.grey),
@@ -171,11 +206,13 @@ class _LogViewState extends State<LogView> {
                     ),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: Colors.redAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                       onPressed: () {
-                        Navigator.pop(context); // Tutup popup dialog dulu
-                        // Arahkan kembali ke halaman Login dan hapus riwayat navigasi
+                        Navigator.pop(context);
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(
@@ -194,6 +231,7 @@ class _LogViewState extends State<LogView> {
               );
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
@@ -201,16 +239,29 @@ class _LogViewState extends State<LogView> {
           if (_isOffline)
             Container(
               width: double.infinity,
-              color: Colors.redAccent,
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              decoration: const BoxDecoration(
+                color: Color(0xFFE53935), // Merah Material
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
               child: const Row(
                 children: [
                   Icon(Icons.wifi_off, color: Colors.white, size: 20),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      "Offline Mode: Koneksi terputus. Tarik layar ke bawah untuk mencoba lagi.",
-                      style: TextStyle(color: Colors.white, fontSize: 12),
+                      "Offline Mode: Menggunakan data memori lokal.",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
@@ -218,60 +269,89 @@ class _LogViewState extends State<LogView> {
             ),
 
           Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              // Hubungkan pencarian ke controller
-              onChanged: (v) => _controller.searchLog(v),
-              decoration: InputDecoration(
-                hintText: "Cari Catatan...",
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+            // UI POLISH: Search Bar yang lebih modern dengan shadow
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (v) => _controller.searchLog(v),
+                decoration: InputDecoration(
+                  hintText: "Cari catatan atau laporan...",
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  prefixIcon: Icon(Icons.search, color: Colors.blue.shade400),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 15),
                 ),
               ),
             ),
           ),
           Expanded(
-            // Menggunakan ValueListenableBuilder
             child: ValueListenableBuilder<List<LogModel>>(
               valueListenable: _controller.filteredLogsNotifier,
               builder: (context, currentLogs, _) {
-                // --- TASK 5 MULAI: FILTER VISIBILITAS ---
                 final displayLogs = currentLogs.where((log) {
                   return log.authorId == widget.username ||
                       log.isPublic == true;
                 }).toList();
 
                 if (displayLogs.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.cloud_off, size: 64, color: Colors.grey),
-                        SizedBox(height: 16),
+                        Icon(
+                          Icons.inbox_outlined,
+                          size: 80,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 16),
                         Text(
-                          "Data Kosong / Tarik layar untuk memuat",
-                          style: TextStyle(color: Colors.grey, fontSize: 18),
+                          "Belum ada catatan",
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "Tarik layar ke bawah untuk memuat ulang",
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
                   );
                 }
 
-                // Pull-to-Refresh Indicator
                 return RefreshIndicator(
+                  color: Colors.blueAccent,
                   onRefresh: _refreshData,
                   child: ListView.builder(
-                    physics:
-                        const AlwaysScrollableScrollPhysics(), // Wajib agar selalu bisa ditarik
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ), // Animasi scroll membal ala iOS
                     itemCount: displayLogs.length,
+                    padding: const EdgeInsets.only(
+                      bottom: 80,
+                    ), // Jarak agar tidak tertutup FAB
                     itemBuilder: (context, index) {
                       final log = displayLogs[index];
 
-                      // Pengecekan Gatekeeper (RBAC)
                       bool isOwner = log.authorId == widget.username;
                       bool canDelete = AccessControlService.canPerform(
                         currentRole,
@@ -286,116 +366,193 @@ class _LogViewState extends State<LogView> {
 
                       return Dismissible(
                         key: Key(log.id ?? log.date),
-                        // Kunci fitur Swipe to Delete jika tidak memiliki izin
                         direction: canDelete
                             ? DismissDirection.endToStart
                             : DismissDirection.none,
                         background: Container(
-                          color: Colors.red,
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade400,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          child: const Icon(Icons.delete, color: Colors.white),
+                          padding: const EdgeInsets.only(right: 24),
+                          child: const Icon(
+                            Icons.delete_sweep,
+                            color: Colors.white,
+                            size: 30,
+                          ),
                         ),
                         confirmDismiss: (direction) async {
                           return await showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
-                              title: const Text("Hapus Catatan?"),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              title: const Text(
+                                "Hapus Catatan?",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
                               content: const Text(
-                                "Data akan dihapus permanen dari Lokal & Cloud.",
+                                "Catatan ini akan dihapus secara permanen dari Lokal & Cloud.",
                               ),
                               actions: [
                                 TextButton(
                                   onPressed: () =>
                                       Navigator.pop(context, false),
-                                  child: const Text("Batal"),
+                                  child: const Text(
+                                    "Batal",
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
                                 ),
-                                TextButton(
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.redAccent,
+                                  ),
                                   onPressed: () => Navigator.pop(context, true),
-                                  child: const Text("Hapus"),
+                                  child: const Text(
+                                    "Hapus",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
                                 ),
                               ],
                             ),
                           );
                         },
                         onDismissed: (dir) async {
-                          // Gunakan controller agar terhapus di Lokal (Hive) dan Cloud sekaligus
                           await _controller.removeLog(log);
                         },
+                        // UI POLISH: Card Design
                         child: Card(
+                          elevation: 2, // Soft shadow
+                          shadowColor: Colors.black26,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: Colors.white.withOpacity(0.6),
+                              width: 1.5,
+                            ), // Garis tepi putih halus
+                          ),
                           color: _getCategoryColor(log.category),
                           margin: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 8,
                           ),
-                          child: ListTile(
-                            title: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    log.title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                // Tampilkan nama author kecil di pojok kanan atas judul
-                                Text(
-                                  "by: ${log.authorId}",
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.purple,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            // Badge Kategori dan Timestamp
-                            subtitle: Column(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  log.description,
-                                  maxLines:
-                                      2, // Batasi teks panjang agar kartu rapi
-                                  overflow: TextOverflow.ellipsis,
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        log.title,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 16,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                    if (canEdit)
+                                      InkWell(
+                                        onTap: () =>
+                                            _goToEditor(log: log, index: index),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.withOpacity(0.1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.edit_rounded,
+                                            color: Colors.blue.shade700,
+                                            size: 18,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                                 const SizedBox(height: 6),
+                                Text(
+                                  log.description,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.black54,
+                                    fontSize: 13,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                // UI POLISH: Footer berisi Badges
                                 Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Row(
                                       children: [
-                                        //  BADGE PRIVASI (IKON) ---
-                                        Icon(
-                                          log.isPublic
-                                              ? Icons.public
-                                              : Icons.lock,
-                                          size: 14,
-                                          color: log.isPublic
-                                              ? Colors.blue
-                                              : Colors.red,
+                                        // Badge Privasi
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: log.isPublic
+                                                ? Colors.blue.withOpacity(0.15)
+                                                : Colors.red.withOpacity(0.15),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            log.isPublic
+                                                ? Icons.public
+                                                : Icons.lock_outline,
+                                            size: 14,
+                                            color: log.isPublic
+                                                ? Colors.blue.shade700
+                                                : Colors.red.shade700,
+                                          ),
                                         ),
-                                        const SizedBox(width: 4),
+                                        const SizedBox(width: 8),
+                                        // Badge Kategori (Pill shape)
                                         Container(
                                           padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
+                                            horizontal: 10,
+                                            vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Colors.white54,
+                                            color: Colors.white60,
                                             borderRadius: BorderRadius.circular(
-                                              4,
+                                              20,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.black12,
+                                              width: 0.5,
                                             ),
                                           ),
                                           child: Text(
                                             log.category,
                                             style: const TextStyle(
-                                              fontSize: 10,
+                                              fontSize: 11,
                                               fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
                                             ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        // Badge Author
+                                        Text(
+                                          "By ${log.authorId}",
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.purple.shade400,
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         ),
                                       ],
@@ -403,25 +560,15 @@ class _LogViewState extends State<LogView> {
                                     Text(
                                       _formatTimestamp(log.date),
                                       style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.grey.shade700,
-                                        fontStyle: FontStyle.italic,
+                                        fontSize: 11,
+                                        color: Colors.grey.shade600,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ],
                                 ),
                               ],
                             ),
-                            trailing: canEdit
-                                ? IconButton(
-                                    icon: const Icon(
-                                      Icons.edit,
-                                      color: Colors.blue,
-                                    ),
-                                    onPressed: () =>
-                                        _goToEditor(log: log, index: index),
-                                  )
-                                : const SizedBox.shrink(),
                           ),
                         ),
                       );
@@ -433,14 +580,21 @@ class _LogViewState extends State<LogView> {
           ),
         ],
       ),
+      // UI POLISH: Floating Action Button yang lebih modern
       floatingActionButton: FloatingActionButton.extended(
-        // Arahkan tombol tambah ke halaman editor baru
+        elevation: 4,
+        highlightElevation: 8,
         onPressed: () => _goToEditor(),
-        backgroundColor: Colors.green, // Mempertahankan warna asli pilihanmu
-        icon: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: const Color(0xFF43A047), // Hijau elegan
+        icon: const Icon(Icons.add_task, color: Colors.white, size: 22),
         label: const Text(
-          "Add catatan", // Mempertahankan teks pilihanmu
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          "Tambah Catatan",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+            fontSize: 14,
+          ),
         ),
       ),
     );
