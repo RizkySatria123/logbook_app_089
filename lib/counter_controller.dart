@@ -4,9 +4,12 @@ class CounterController {
   final List<HistoryEntry> _history = [];
 
   int get value => _counter;
+  int get step => _step;
   List<HistoryEntry> get history => List.unmodifiable(_history);
 
   void updateStep(int step) {
+    // Validasi: abaikan nilai negatif
+    if (step < 0) return;
     _step = step;
   }
 
@@ -17,6 +20,10 @@ class CounterController {
 
   void decrement() {
     _counter -= _step;
+    // Validasi: counter tidak boleh di bawah nol
+    if (_counter < 0) {
+      _counter = 0;
+    }
     _addHistory(HistoryAction.kurang, _step);
   }
 
