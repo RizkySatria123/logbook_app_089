@@ -1,0 +1,12 @@
+﻿00:00 +0: loading C:/modul_proyek4/logbook_app_089/test/module1_counter_test.dart
+00:00 +0: Module 1 - CounterController (with storage & step) TC01 - initial value should be 0
+00:00 +1: Module 1 - CounterController (with storage & step) TC02 - setStep should change step value
+00:00 +2: Module 1 - CounterController (with storage & step) TC03 - setStep should ignore negative value
+00:00 +3: Module 1 - CounterController (with storage & step) TC04 - increment should increase counter based on step
+00:00 +4: Module 1 - CounterController (with storage & step) TC05 - decrement should decrease counter based on step
+00:00 +5: Module 1 - CounterController (with storage & step) TC06 - decrement should not go below zero
+00:00 +6: Module 1 - CounterController (with storage & step) TC07 - reset should set counter to zero
+00:00 +7: Module 1 - CounterController (with storage & step) TC08 - history should record actions
+00:00 +8: Module 1 - CounterController (with storage & step) TC09 - history should not exceed 5 items
+00:00 +9: Module 1 - CounterController (with storage & step) TC10 - counter should persist using SharedPreferences
+00:00 +10: All tests passed!
