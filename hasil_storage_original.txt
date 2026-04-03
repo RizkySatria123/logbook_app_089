@@ -1,0 +1,30 @@
+﻿Resolving dependencies...
+Downloading packages...
+  async 2.13.0 (2.13.1 available)
+> characters 1.4.1 (was 1.4.0)
+  cupertino_icons 1.0.8 (1.0.9 available)
+> matcher 0.12.19 (was 0.12.17)
+> material_color_utilities 0.13.0 (was 0.11.1)
+  meta 1.17.0 (1.18.2 available)
+  shared_preferences 2.5.4 (2.5.5 available)
+  shared_preferences_android 2.4.20 (2.4.23 available)
+  shared_preferences_platform_interface 2.4.1 (2.4.2 available)
+> test_api 0.7.10 (was 0.7.7) (0.7.11 available)
+  vector_math 2.2.0 (2.3.0 available)
+Changed 4 dependencies!
+8 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading C:/modul_proyek4/logbook_app_089/test/storage_controller_original_test.dart
+00:00 +0: StorageControllerOriginal - SharedPreferences TC01 - saveToLocal lalu loadFromLocal harus mengembalikan nilai yang sama
+00:00 +1: StorageControllerOriginal - SharedPreferences TC02 - saveToLocal overwrite harus mengembalikan nilai terbaru
+00:00 +2: StorageControllerOriginal - SharedPreferences TC03 - saveToLocal dengan key kosong harus melempar Exception
+00:00 +2 -1: StorageControllerOriginal - SharedPreferences TC03 - saveToLocal dengan key kosong harus melempar Exception [E]
+  Expected: throws <Instance of 'ArgumentError'>
+    Actual: <Closure: () => Future<void>>
+     Which: returned a Future that emitted <null>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\storage_controller_original_test.dart 74:7     main.<fn>.<fn>
+  
+00:00 +2 -1: Some tests failed.
