@@ -1,9 +1,9 @@
 import 'dart:async';
 
-/// KODE YANG SUDAH DIPERBAIKI
-/// Fix: login dengan input kosong melempar Exception
-/// Fix: password minimal 6 karakter
-class AuthController {
+/// KODE ORIGINAL (SEBELUM PERBAIKAN)
+/// Bug: login dengan input kosong tidak melempar Exception, hanya return false
+/// Bug: tidak ada validasi panjang minimum password
+class AuthControllerOriginal {
   final Map<String, String> _users = {
     'admin': '123',
     'rizky': 'satria123',
@@ -19,9 +19,9 @@ class AuthController {
   Future<bool> login(String username, String password) async {
     if (_isLocked) return false;
 
-    // FIX: Input kosong harus melempar Exception
+    // BUG: Input kosong hanya return false, tidak throw Exception
     if (username.isEmpty || password.isEmpty) {
-      throw Exception('Username dan password tidak boleh kosong');
+      return false;
     }
 
     if (_users.containsKey(username) && _users[username] == password) {

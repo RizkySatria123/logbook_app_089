@@ -1,8 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:logbook_app_089/auth_controller.dart';
+import 'package:logbook_app_089/auth_controller_original.dart';
 
+/// ═══════════════════════════════════════════════════════════════════════════
+/// TEST TERHADAP KODE ORIGINAL (SEBELUM PERBAIKAN)
+/// File yang diuji: lib/auth_controller_original.dart
+/// Tujuan: Menemukan bug pada source code original
+/// ═══════════════════════════════════════════════════════════════════════════
 void main() {
-  group('AuthController - login()', () {
+  group('AuthControllerOriginal - login()', () {
     // ═══════════════════════════════════════════════════════════════════════
     // TC01 | login() | Test Positif
     // Login dengan kredensial benar → harus return true
@@ -10,7 +15,7 @@ void main() {
     test('TC01 - login dengan kredensial benar harus mengembalikan true',
         () async {
       // (1) setup (arrange, build)
-      final authController = AuthController();
+      final authController = AuthControllerOriginal();
       const username = 'admin';
       const password = '123';
 
@@ -29,7 +34,7 @@ void main() {
     test('TC02 - login dengan password salah harus mengembalikan false',
         () async {
       // (1) setup (arrange, build)
-      final authController = AuthController();
+      final authController = AuthControllerOriginal();
       const username = 'admin';
       const password = 'salahpassword';
 
@@ -48,7 +53,7 @@ void main() {
     test('TC03 - login dengan parameter kosong harus melempar Exception',
         () async {
       // (1) setup (arrange, build)
-      final authController = AuthController();
+      final authController = AuthControllerOriginal();
       const username = '';
       const password = '';
 

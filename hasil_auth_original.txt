@@ -1,0 +1,14 @@
+﻿00:00 +0: loading C:/modul_proyek4/logbook_app_089/test/auth_controller_original_test.dart
+00:00 +0: AuthControllerOriginal - login() TC01 - login dengan kredensial benar harus mengembalikan true
+00:00 +1: AuthControllerOriginal - login() TC02 - login dengan password salah harus mengembalikan false
+00:00 +2: AuthControllerOriginal - login() TC03 - login dengan parameter kosong harus melempar Exception
+00:00 +2 -1: AuthControllerOriginal - login() TC03 - login dengan parameter kosong harus melempar Exception [E]
+  Expected: throws <Instance of 'Exception'>
+    Actual: <Closure: () => Future<bool>>
+     Which: returned a Future that emitted <false>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\auth_controller_original_test.dart 61:7        main.<fn>.<fn>
+  
+00:00 +2 -1: Some tests failed.
