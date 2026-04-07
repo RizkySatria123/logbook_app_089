@@ -47,7 +47,7 @@ class CounterController {
   /// Reset counter ke nol
   /// FIX: Menambahkan baris _counter = 0
   Future<void> reset(String username) async {
-    _counter = 0; // ← PERBAIKAN: reset counter ke 0
+    // BUG: lupa mereset _counter = 0
     _addHistory("User melakukan reset");
     await _saveCounter(username);
   }
