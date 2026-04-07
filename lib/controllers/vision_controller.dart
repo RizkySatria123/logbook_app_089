@@ -1,6 +1,12 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:camera/camera.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter/widgets.dart';
 import 'package:permission_handler/permission_handler.dart';
+
+import '../models/detection_result.dart';
 
 /// Enum untuk merepresentasikan status kamera secara eksplisit.
 enum CameraStatus {
@@ -25,11 +31,29 @@ class VisionController extends ChangeNotifier implements WidgetsBindingObserver 
   CameraStatus _status = CameraStatus.idle;
   String? _errorMessage;
 
+  // ── Mock Detector State ───────────────────────────────────────────────────
+
+  /// Timer periodik yang memicu simulasi deteksi setiap 3 detik.
+  Timer? _mockDetectionTimer;
+
+  /// Hasil deteksi terkini (koordinat normalisasi 0.0–1.0).
+  /// Null jika belum ada deteksi.
+  DetectionResult? _currentDetection;
+
+  /// Random number generator untuk menghasilkan bounding box acak.
+  final math.Random _random = math.Random();
+
   // ─── Getters ─────────────────────────────────────────────────────────────
 
   CameraController? get cameraController => _cameraController;
   CameraStatus get status => _status;
   String? get errorMessage => _errorMessage;
+
+  /// Hasil deteksi objek terbaru (koordinat normalisasi).
+  DetectionResult? get currentDetection => _currentDetection;
+
+  /// Apakah mock detector sedang aktif.
+  bool get isDetecting => _mockDetectionTimer?.isActive ?? false;
 
   /// Apakah preview kamera siap ditampilkan ke UI.
   bool get isCameraReady =>
@@ -107,6 +131,9 @@ class VisionController extends ChangeNotifier implements WidgetsBindingObserver 
       // ── Step 5: Inisialisasi dan beri tahu UI ─────────────────────────
       await _cameraController!.initialize();
       _setStatus(CameraStatus.ready);
+
+      // Mulai mock detector begitu kamera siap.
+      _startMockDetection();
     } on CameraException catch (e) {
       _setStatus(
         CameraStatus.error,
@@ -119,11 +146,78 @@ class VisionController extends ChangeNotifier implements WidgetsBindingObserver 
 
   /// Melepas resource kamera secara aman.
   Future<void> disposeCamera() async {
+    // Hentikan mock detector sebelum melepas kamera.
+    _stopMockDetection();
     if (_cameraController != null) {
       await _cameraController!.dispose();
       _cameraController = null;
+      _currentDetection = null;
       _setStatus(CameraStatus.disposed);
     }
+  }
+
+  // ─── Mock Detector ────────────────────────────────────────────────────────
+
+  /// Memulai Timer periodik yang mensimulasikan inferensi model YOLO.
+  ///
+  /// Timer terpicu setiap **3 detik** (setara 1 inference cycle lambat).
+  /// Saat model asli diintegrasikan, ganti isi callback ini dengan
+  /// panggilan ke `YoloInference.run(frame)`.
+  void _startMockDetection() {
+    // Batalkan timer sebelumnya jika ada agar tidak terjadi duplikasi.
+    _stopMockDetection();
+
+    _mockDetectionTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => _generateMockDetection(),
+    );
+  }
+
+  /// Menghentikan Timer dan membersihkan referensi agar tidak terjadi leak.
+  void _stopMockDetection() {
+    _mockDetectionTimer?.cancel();
+    _mockDetectionTimer = null;
+  }
+
+  /// Menghasilkan satu [DetectionResult] acak dengan:
+  /// - [box]   → koordinat normalisasi (0.0 – 1.0)
+  /// - [label] → dipilih acak dari [DamageLabel] RDD-2022
+  /// - [score] → confidence acak antara 0.55 – 0.98
+  void _generateMockDetection() {
+    // ── Bounding box normalisasi ──────────────────────────────────────────
+    //
+    // Pastikan box tidak keluar layar: right > left dan bottom > top.
+    // Ukuran minimum = 15% layar, maksimum = 55% layar.
+    final double minSize = 0.15;
+    final double maxSize = 0.55;
+
+    final double left   = _random.nextDouble() * (1.0 - maxSize);
+    final double top    = _random.nextDouble() * (1.0 - maxSize);
+    final double width  = minSize + _random.nextDouble() * (maxSize - minSize);
+    final double height = minSize + _random.nextDouble() * (maxSize - minSize);
+
+    final Rect normalizedBox = Rect.fromLTWH(
+      left.clamp(0.0, 1.0 - width),
+      top.clamp(0.0, 1.0 - height),
+      width,
+      height,
+    );
+
+    // ── Label acak dari dataset RDD-2022 ──────────────────────────────────
+    final labels = DamageLabel.values;
+    final DamageLabel randomLabel = labels[_random.nextInt(labels.length)];
+
+    // ── Confidence score: 55% – 98% ───────────────────────────────────────
+    final double score = 0.55 + _random.nextDouble() * 0.43;
+
+    _currentDetection = DetectionResult(
+      box: normalizedBox,
+      label: '${randomLabel.code} – ${randomLabel.displayName}',
+      score: score,
+    );
+
+    // Beritahu UI bahwa ada deteksi baru.
+    notifyListeners();
   }
 
   // ─── WidgetsBindingObserver ───────────────────────────────────────────────
@@ -171,6 +265,8 @@ class VisionController extends ChangeNotifier implements WidgetsBindingObserver 
 
   /// Panggil saat lifecycle: inactive / hidden.
   void _handleInactive() {
+    // Hentikan mock detector saat tidak aktif (hemat resource).
+    _stopMockDetection();
     if (_cameraController != null && _cameraController!.value.isInitialized) {
       disposeCamera();
     }
@@ -180,7 +276,7 @@ class VisionController extends ChangeNotifier implements WidgetsBindingObserver 
   void _handleResumed() {
     // Hanya re-init jika kamera belum aktif.
     if (_status != CameraStatus.ready) {
-      initCamera();
+      initCamera(); // _startMockDetection() dipanggil otomatis di dalam initCamera
     }
   }
 
@@ -195,6 +291,8 @@ class VisionController extends ChangeNotifier implements WidgetsBindingObserver 
 
   @override
   void dispose() {
+    // Hentikan mock detector.
+    _stopMockDetection();
     // Hapus observer lifecycle dari WidgetsBinding.
     WidgetsBinding.instance.removeObserver(this);
     // Pastikan resource kamera dilepas sebelum controller dihancurkan.

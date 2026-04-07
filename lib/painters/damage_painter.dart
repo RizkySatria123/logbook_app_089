@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../models/detection_result.dart';
+
 /// [DamagePainter] menggambar overlay transparan di atas [CameraPreview].
 ///
 /// Komponen yang digambar:
 /// 1. Kotak crosshair statis — tepat di tengah layar, lebar = 50% [size.width]
 /// 2. Label teks — menempel tepat di atas garis atas kotak
+/// 3. Bounding box deteksi — koordinat normalisasi di-scale ke piksel layar
 ///
 /// Semua koordinat menggunakan **Logical Pixels** sehingga responsif
 /// di berbagai ukuran dan densitas layar.
@@ -18,10 +21,15 @@ class DamagePainter extends CustomPainter {
   /// Ukuran font label teks.
   final double fontSize;
 
+  /// Daftar hasil deteksi yang akan digambar sebagai bounding box.
+  /// Koordinat [DetectionResult.box] harus dalam normalisasi (0.0–1.0).
+  final DetectionResult? detection;
+
   const DamagePainter({
     this.color = const Color(0xFF00FF88),
     this.strokeWidth = 2.0,
     this.fontSize = 13.0,
+    this.detection,
   });
 
   // ─── paint ───────────────────────────────────────────────────────────────
@@ -69,6 +77,11 @@ class DamagePainter extends CustomPainter {
 
     // ── 6. Gambar label teks di atas garis atas kotak ────────────────────
     _drawLabel(canvas, boxRect);
+
+    // ── 7. Gambar bounding box deteksi (jika ada) ─────────────────────────
+    if (detection != null) {
+      _drawBoundingBox(canvas, size, detection!);
+    }
   }
 
   // ─── Helper: Corner Marks ─────────────────────────────────────────────────
@@ -163,14 +176,107 @@ class DamagePainter extends CustomPainter {
     textPainter.paint(canvas, Offset(dx, dy));
   }
 
+  // ─── Coordinate Scaling: Normalized → Screen Pixels ──────────────────────
+
+  /// Mengubah koordinat normalisasi [DetectionResult.box] menjadi posisi
+  /// piksel nyata berdasarkan [size] canvas yang sedang aktif.
+  ///
+  /// **Formula scaling:**
+  /// ```
+  /// screenX = normalizedX * canvasWidth
+  /// screenY = normalizedY * canvasHeight
+  /// ```
+  ///
+  /// Keunggulan: bounding box tetap proporsional di semua resolusi layar
+  /// karena koordinat tidak pernah di-hardcode dalam piksel absolut.
+  void _drawBoundingBox(Canvas canvas, Size size, DetectionResult result) {
+    // ── 1. Scale: normalisasi → logical pixels ────────────────────────────
+    //
+    // toScreenRect() mengalikan setiap komponen Rect dengan size:
+    //   left   = box.left   * size.width
+    //   top    = box.top    * size.height
+    //   right  = box.right  * size.width
+    //   bottom = box.bottom * size.height
+    final Rect screenRect = result.toScreenRect(size);
+
+    // ── 2. Paint konfigurasi untuk bounding box deteksi ───────────────────
+    final Paint bbPaint = Paint()
+      ..color = Colors.redAccent.withAlpha(220)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth + 0.5 // Sedikit lebih tebal dari crosshair
+      ..strokeCap = StrokeCap.round;
+
+    // ── 3. Gambar bounding box ────────────────────────────────────────────
+    canvas.drawRect(screenRect, bbPaint);
+
+    // ── 4. Gambar badge label + score di atas bounding box ────────────────
+    _drawDetectionBadge(canvas, screenRect, result, size);
+  }
+
+  /// Menggambar badge label dan confidence score di atas bounding box.
+  /// Badge memiliki latar belakang semi-transparan agar mudah dibaca.
+  void _drawDetectionBadge(Canvas canvas, Rect screenRect,
+      DetectionResult result, Size size) {
+    final String badgeText = '${result.label}  ${result.scorePercent}';
+
+    // ── TextPainter untuk badge ───────────────────────────────────────────
+    final TextPainter badgePainter = TextPainter(
+      text: TextSpan(
+        text: badgeText,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: fontSize - 1,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout(minWidth: 0, maxWidth: size.width * 0.9);
+
+    // ── Dimensi dan posisi badge ──────────────────────────────────────────
+    const double paddingH = 6.0; // padding horizontal
+    const double paddingV = 3.0; // padding vertikal
+    const double badgeRadius = 4.0;
+
+    final double badgeW = badgePainter.width + paddingH * 2;
+    final double badgeH = badgePainter.height + paddingV * 2;
+
+    // Tempatkan badge tepat di atas garis atas bounding box.
+    // Jika terlalu dekat tepi atas layar, geser ke bawah agar tidak terpotong.
+    double badgeTop = screenRect.top - badgeH - 2;
+    if (badgeTop < 0) badgeTop = screenRect.top + 2;
+
+    // Clamp agar tidak keluar dari sisi kanan layar.
+    final double badgeLeft =
+        (screenRect.left).clamp(0.0, size.width - badgeW);
+
+    final Rect badgeRect = Rect.fromLTWH(badgeLeft, badgeTop, badgeW, badgeH);
+
+    // ── Gambar latar belakang badge ───────────────────────────────────────
+    final Paint bgPaint = Paint()
+      ..color = Colors.redAccent.withAlpha(200)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(badgeRect, const Radius.circular(badgeRadius)),
+      bgPaint,
+    );
+
+    // ── Gambar teks badge ─────────────────────────────────────────────────
+    badgePainter.paint(
+      canvas,
+      Offset(badgeLeft + paddingH, badgeTop + paddingV),
+    );
+  }
+
   // ─── shouldRepaint ────────────────────────────────────────────────────────
 
   /// Kembalikan [true] hanya jika properti yang mempengaruhi visual berubah.
-  /// Karena painter ini statis, repaint tidak diperlukan kecuali warna berubah.
   @override
   bool shouldRepaint(covariant DamagePainter oldDelegate) {
     return oldDelegate.color != color ||
         oldDelegate.strokeWidth != strokeWidth ||
-        oldDelegate.fontSize != fontSize;
+        oldDelegate.fontSize != fontSize ||
+        oldDelegate.detection != detection; // Repaint saat deteksi baru tiba
   }
 }
