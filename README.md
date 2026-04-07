@@ -130,6 +130,57 @@ Pada modul ini, aplikasi melakukan migrasi penyimpanan dari memori lokal menuju 
 
 ---
 
+## 🚀 MODUL 5: Offline-First & Collaborative Intelligence
+
+[cite_start]Pada modul ini, aplikasi bertransformasi menjadi sistem yang tahan banting (*resilient*) terhadap gangguan jaringan dan mendukung kolaborasi tim dengan sistem keamanan berbasis peran (RBAC)[cite: 2016, 2018, 2020].
+
+### Task 1: Tugas Pendahuluan
+[cite_start]**Fokus:** Pemahaman teoritis tentang basis data biner, keamanan terpusat, dan *Markdown*[cite: 2655].
+- [x] [cite_start]**Local Persistence:** Memahami keunggulan Hive (basis data biner NoSQL) dibandingkan Shared Preferences untuk performa aplikasi yang bebas *lag*[cite: 2657, 2659, 2660].
+- [x] [cite_start]**Centralized Security:** Memahami konsep *Gatekeeper* agar logika perizinan terpusat di satu file (`access_policy.dart`) demi keamanan dan kemudahan modifikasi (Prinsip SOLID)[cite: 2664, 2666, 2669].
+- [x] [cite_start]**Markdown Syntax:** Mempelajari sintaks dasar *Markdown* seperti *Code Blocks*, *Headers*, dan *Lists* untuk dokumentasi teknis[cite: 2672, 2673, 2674, 2676, 2678].
+
+### Task 2: The Resilient Logger (LOTS)
+[cite_start]**Fokus:** Mengimplementasikan persistensi biner lokal menggunakan Hive[cite: 2680].
+- [x] [cite_start]**Model Adaptation:** Update `LogModel` dengan anotasi `@HiveType` dan `@HiveField`, lalu *generate* adaptor (`.g.dart`)[cite: 2682, 2687].
+- [x] [cite_start]**Local Box:** Implementasi fungsi simpan dan baca menggunakan `Hive.box` di dalam `LogController`[cite: 2683, 2689].
+- [x] [cite_start]**Instant UI:** Daftar catatan tetap muncul secara instan di layar meskipun internet dimatikan (*Offline-First*)[cite: 2684, 2688].
+
+### Task 3: Collaborative Security & RBAC (MOTS)
+[cite_start]**Fokus:** Mengatur hak akses tim dan migrasi navigasi[cite: 2691].
+- [x] [cite_start]**Security Policy:** Membuat class `AccessPolicy` untuk membatasi hak akses (Ketua vs Anggota)[cite: 2693].
+- [x] [cite_start]**Detailed Editor:** Memigrasikan input data dari *Dialog Box* ke antarmuka halaman penuh (`LogEditorPage`)[cite: 2694].
+- [x] [cite_start]**Role Validation:** Tombol edit/hapus otomatis non-aktif atau hilang saat login sebagai Anggota[cite: 2696, 2700].
+
+### Task 4: The Sync Manager & Markdown Preview (HOTS)
+[cite_start]**Fokus:** Sinkronisasi cerdas antara Hive (Lokal) dan MongoDB Atlas (Cloud)[cite: 2701].
+- [x] [cite_start]**Background Sync:** Menggunakan alur *asynchronous* di mana data langsung tersimpan di lokal (Hive), lalu secara diam-diam diunggah ke MongoDB jika koneksi tersedia tanpa nge-*freeze*[cite: 2703, 2707].
+- [x] [cite_start]**Markdown Rendering:** Teks yang diketik dengan format Markdown di *Editor* otomatis di-*render* secara rapi pada tab *Preview*[cite: 2704, 2708].
+- [x] [cite_start]**Connectivity Awareness:** Indikator visual berubah sesuai dengan status keberhasilan sinkronisasi ke Cloud[cite: 2705].
+
+### Task 5: Data Privacy & Sovereignty (HOTS)
+[cite_start]**Fokus:** Kontrol privasi dan kedaulatan kepemilikan data[cite: 2710].
+- [x] **Private by Default:** Menambahkan variabel `isPublic`. [cite_start]Catatan "Private" disembunyikan dari rekan satu tim[cite: 2713, 2719, 2726].
+- [x] **Sovereignty:** Memastikan HANYA pembuat catatan (*Owner*) yang bisa mengedit atau menghapus. [cite_start]Ketua tim tidak bisa lagi mengubah catatan orang lain sembarangan[cite: 2715, 2728, 2732].
+
+### Tugas Pengayaan: The Privacy Leak Test
+[cite_start]**Fokus:** Melakukan verifikasi keamanan dengan Unit Test[cite: 2734].
+- [x] [cite_start]**Automated Testing:** Berhasil membuat dan menjalankan skrip *Unit Test* (`rbac_security_test.dart`) untuk membuktikan bahwa sistem filter *Gatekeeper* mencegah kebocoran catatan privat antar pengguna[cite: 2735, 2736, 2742].
+
+### Homework Cosmetic & UX Enhancement (30%)
+- [x] [cite_start]**Smart Search & Filter:** Pencarian data *real-time* menggunakan input text yang tersinkronisasi tanpa memanggil ulang ke *database*[cite: 2748, 2751].
+- [x] [cite_start]**Informative Empty State:** Menampilkan ilustrasi animasi saat belum ada data, bukan layar putih polos[cite: 2753, 2755].
+- [x] [cite_start]**Categorization & Color Coding:** Membedakan warna *Card* secara otomatis berdasarkan Kategori ("Pekerjaan", "Pribadi", "Urgent") agar mudah dibaca[cite: 2757, 2760].
+
+---
+
+
+### Modul 5: Offline-First & Collaborative
+| Offline Connection Guard | Status Sinkronisasi Online | Markdown Editor & Privacy |
+|:---:|:---:|:---:|
+| ![Offline State](gambar_praktikum/IMG11.jpeg) | ![Online State](gambar_praktikum/IMG12.jpeg) | ![Editor & Markdown](gambar_praktikum/IMG10.jpeg) |
+
+
 ## 📸 Screenshots
 
 ### Modul 1: Counter & Logic
@@ -152,6 +203,11 @@ Pada modul ini, aplikasi melakukan migrasi penyimpanan dari memori lokal menuju 
 |:---:|:---:|:---:|
 | ![Cloud Data View](gambar_praktikum/IMG7.jpeg) | ![Offline Guard](gambar_praktikum/IMG9.jpeg) |
 
+### Modul 5: Offline-First & Collaborative
+| Offline Connection Guard | Status Sinkronisasi Online | Markdown Editor & Privacy |
+|:---:|:---:|:---:|
+| ![Offline State](gambar_praktikum/IMG11.jpeg) | ![Online State](gambar_praktikum/IMG12.jpeg) | ![Editor & Markdown](gambar_praktikum/IMG10.jpeg) |
+
 ---
 ## 🧠 Self Reflection (Lesson Learnt)
 
@@ -172,3 +228,8 @@ Prinsip SRP membuat logika counter dan pencatatan riwayat terpisah di `CounterCo
 1. **Konsep Baru:** Saya baru benar-benar memahami pentingnya arsitektur pengamanan lingkungan menggunakan file `.env` dan penerapan **Pola Singleton** dalam mengelola layanan Cloud. Penggunaan `ObjectId` juga mengubah cara pandang saya mengenai pemetaan kunci unik antara objek Dart dan dokumen BSON di database NoSQL.
 2. **Kemenangan Kecil:** Berhasil mendiagnosis dan memecahkan kendala koneksi *Timeout* yang disebabkan oleh pemblokiran di *IP Whitelist* MongoDB Atlas, serta sukses merestorasi UI (*Assertion Error*) yang sempat berantakan agar *Greeting*, fitur *Search*, dan indikator kategori kembali berjalan normal bersamaan dengan latensi *FutureBuilder*.
 3. **Target Berikutnya:** Setelah sukses mengintegrasikan arsitektur database *Cloud* dan penanganan performa asinkron (Pull-to-Refresh & Connection Guard), target saya selanjutnya adalah mendalami cara menerapkan *Real-time Stream* (WebSocket) agar aplikasi tidak perlu direfresh manual saat ada data masuk dari perangkat lain.
+
+### Modul 5
+1. [cite_start]**Konsep Baru:** Baru tahu dan benar-benar paham tentang konsep arsitektur **Offline-First** dan **Background Sync**[cite: 2857]. [cite_start]Ternyata, membuat aplikasi yang tahan banting saat tidak ada internet itu bukan sekadar menyimpan data di lokal (Hive), tapi bagaimana mengatur logikanya (*fire-and-forget*) agar aplikasi tidak *nge-freeze* saat menunggu respons server, serta bagaimana merancang sensor agar data otomatis terkirim ke Cloud saat internet kembali menyala tanpa interaksi pengguna[cite: 2858].
+2. [cite_start]**Kemenangan Kecil:** Berhasil menjadi "detektif kode" dengan memecahkan *bug* **"The Silent Wipe"** yang bikin pusing karena catatan sempat hilang sendiri dalam 1 detik[cite: 2859]. [cite_start]Sangat memuaskan rasanya ketika sadar bahwa masalahnya ada di fungsi yang me-*return list* kosong saat *offline*, dan berhasil memperbaikinya menggunakan `rethrow`[cite: 2860]. [cite_start]Ditambah lagi, berhasil mengatasi kepanikan saat *error* gagal *upgrade* SDK Flutter di terminal! [cite: 2861]
+3. [cite_start]**Target Berikutnya:** Pengen banget mendalami tentang **Automated Testing** (Pengujian Otomatis) di Modul 6 nanti[cite: 2862]. [cite_start]Setelah mencoba *Privacy Leak Test* di akhir tugas ini, rasanya sangat melegakan dan memuaskan melihat centang hijau *"All tests passed!"* di terminal[cite: 2863]. [cite_start]Jadi makin penasaran bagaimana cara membuat *test case* yang lebih kompleks untuk menguji keamanan dan fungsionalitas fitur-fitur lainnya[cite: 2864].
