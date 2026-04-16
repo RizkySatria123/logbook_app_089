@@ -32,6 +32,23 @@ class DamagePainter extends CustomPainter {
     this.detection,
   });
 
+  // ─── Static: Damage Severity Color ───────────────────────────────────────
+
+  /// Mengembalikan warna berdasarkan tingkat keparahan kerusakan dari label.
+  ///
+  /// | Severity  | Kode  | Warna               |
+  /// |-----------|-------|---------------------|
+  /// | Berat     | D40   | Merah (bahaya)      |
+  /// | Berat     | D20   | Merah (bahaya)      |
+  /// | Ringan    | D10   | Kuning (peringatan) |
+  /// | Ringan    | D00   | Kuning (peringatan) |
+  static Color damageColorOf(String label) {
+    if (label.startsWith('D40') || label.startsWith('D20')) {
+      return const Color(0xFFFF3B30); // Merah kuat — kerusakan berat
+    }
+    return const Color(0xFFFFCC00); // Kuning — kerusakan ringan
+  }
+
   // ─── paint ───────────────────────────────────────────────────────────────
 
   @override
@@ -190,36 +207,40 @@ class DamagePainter extends CustomPainter {
   /// Keunggulan: bounding box tetap proporsional di semua resolusi layar
   /// karena koordinat tidak pernah di-hardcode dalam piksel absolut.
   void _drawBoundingBox(Canvas canvas, Size size, DetectionResult result) {
-    // ── 1. Scale: normalisasi → logical pixels ────────────────────────────
-    //
-    // toScreenRect() mengalikan setiap komponen Rect dengan size:
-    //   left   = box.left   * size.width
-    //   top    = box.top    * size.height
-    //   right  = box.right  * size.width
-    //   bottom = box.bottom * size.height
     final Rect screenRect = result.toScreenRect(size);
 
-    // ── 2. Paint konfigurasi untuk bounding box deteksi ───────────────────
+    // ── Warna dinamis berdasarkan severity kerusakan ───────────────────────
+    final Color boxColor = damageColorOf(result.label);
+
+    // ── Paint konfigurasi untuk bounding box deteksi ───────────────────────
     final Paint bbPaint = Paint()
-      ..color = Colors.redAccent.withAlpha(220)
+      ..color = boxColor.withAlpha(220)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth + 0.5 // Sedikit lebih tebal dari crosshair
+      ..strokeWidth = strokeWidth + 0.5
       ..strokeCap = StrokeCap.round;
 
-    // ── 3. Gambar bounding box ────────────────────────────────────────────
+    // ── Glow effect: lapisan luar yang lebih transparan ────────────────────
+    final Paint glowPaint = Paint()
+      ..color = boxColor.withAlpha(60)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = (strokeWidth + 0.5) * 3
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+    canvas.drawRect(screenRect, glowPaint);
     canvas.drawRect(screenRect, bbPaint);
 
-    // ── 4. Gambar badge label + score di atas bounding box ────────────────
-    _drawDetectionBadge(canvas, screenRect, result, size);
+    // ── Badge label + score ────────────────────────────────────────────────
+    _drawDetectionBadge(canvas, screenRect, result, size, boxColor);
   }
 
   /// Menggambar badge label dan confidence score di atas bounding box.
   /// Badge memiliki latar belakang semi-transparan agar mudah dibaca.
   void _drawDetectionBadge(Canvas canvas, Rect screenRect,
-      DetectionResult result, Size size) {
+      DetectionResult result, Size size, Color badgeColor) {
     final String badgeText = '${result.label}  ${result.scorePercent}';
 
-    // ── TextPainter untuk badge ───────────────────────────────────────────
+    // ── TextPainter untuk badge — dengan multi-layer shadow ───────────────
     final TextPainter badgePainter = TextPainter(
       text: TextSpan(
         text: badgeText,
@@ -228,33 +249,53 @@ class DamagePainter extends CustomPainter {
           fontSize: fontSize - 1,
           fontWeight: FontWeight.bold,
           letterSpacing: 0.5,
+          // Multi-layer shadow: stroke luar + drop shadow agar terbaca
+          // di atas permukaan jalan dengan warna apapun.
+          shadows: [
+            Shadow(
+              color: Colors.black.withAlpha(255),
+              offset: const Offset(-1, -1),
+              blurRadius: 2,
+            ),
+            Shadow(
+              color: Colors.black.withAlpha(255),
+              offset: const Offset(1, -1),
+              blurRadius: 2,
+            ),
+            Shadow(
+              color: Colors.black.withAlpha(255),
+              offset: const Offset(-1, 1),
+              blurRadius: 2,
+            ),
+            Shadow(
+              color: Colors.black.withAlpha(200),
+              offset: const Offset(2, 2),
+              blurRadius: 4,
+            ),
+          ],
         ),
       ),
       textDirection: TextDirection.ltr,
     )..layout(minWidth: 0, maxWidth: size.width * 0.9);
 
     // ── Dimensi dan posisi badge ──────────────────────────────────────────
-    const double paddingH = 6.0; // padding horizontal
-    const double paddingV = 3.0; // padding vertikal
-    const double badgeRadius = 4.0;
+    const double paddingH = 8.0;
+    const double paddingV = 4.0;
+    const double badgeRadius = 6.0;
 
     final double badgeW = badgePainter.width + paddingH * 2;
     final double badgeH = badgePainter.height + paddingV * 2;
 
-    // Tempatkan badge tepat di atas garis atas bounding box.
-    // Jika terlalu dekat tepi atas layar, geser ke bawah agar tidak terpotong.
     double badgeTop = screenRect.top - badgeH - 2;
     if (badgeTop < 0) badgeTop = screenRect.top + 2;
-
-    // Clamp agar tidak keluar dari sisi kanan layar.
     final double badgeLeft =
         (screenRect.left).clamp(0.0, size.width - badgeW);
 
     final Rect badgeRect = Rect.fromLTWH(badgeLeft, badgeTop, badgeW, badgeH);
 
-    // ── Gambar latar belakang badge ───────────────────────────────────────
+    // ── Latar belakang badge menggunakan warna severity ───────────────────
     final Paint bgPaint = Paint()
-      ..color = Colors.redAccent.withAlpha(200)
+      ..color = badgeColor.withAlpha(210)
       ..style = PaintingStyle.fill;
 
     canvas.drawRRect(

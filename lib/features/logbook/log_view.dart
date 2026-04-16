@@ -6,6 +6,7 @@ import 'package:logbook_app_089/services/mongo_service.dart';
 import 'package:logbook_app_089/services/access_control_service.dart';
 import 'package:logbook_app_089/features/logbook/log_editor_page.dart';
 import 'package:logbook_app_089/features/auth/login_view.dart';
+import 'package:logbook_app_089/features/vision/vision_page.dart';
 
 class LogView extends StatefulWidget {
   final String username;
@@ -170,6 +171,57 @@ class _LogViewState extends State<LogView> {
           ],
         ),
         actions: [
+          // ── Tombol Vision Camera ─────────────────────────────────────────
+          Tooltip(
+            message: 'Road Damage Vision',
+            child: Container(
+              margin: const EdgeInsets.only(right: 4),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const VisionPage(),
+                    fullscreenDialog: true,
+                  ),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF00FF88).withOpacity(0.6),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.remove_red_eye_outlined,
+                        color: Color(0xFF00FF88),
+                        size: 18,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Vision',
+                        style: TextStyle(
+                          color: Color(0xFF00FF88),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _refreshData,
@@ -580,22 +632,50 @@ class _LogViewState extends State<LogView> {
           ),
         ],
       ),
-      // UI POLISH: Floating Action Button yang lebih modern
-      floatingActionButton: FloatingActionButton.extended(
-        elevation: 4,
-        highlightElevation: 8,
-        onPressed: () => _goToEditor(),
-        backgroundColor: const Color(0xFF43A047), // Hijau elegan
-        icon: const Icon(Icons.add_task, color: Colors.white, size: 22),
-        label: const Text(
-          "Tambah Catatan",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
-            fontSize: 14,
+      // UI POLISH: FAB Group — Tambah Catatan + Vision Camera
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // ── Secondary FAB: Vision Camera ────────────────────────────────
+          FloatingActionButton(
+            heroTag: 'fab_vision',
+            mini: true,
+            elevation: 4,
+            backgroundColor: const Color(0xFF0A0E1A),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const VisionPage(),
+                fullscreenDialog: true,
+              ),
+            ),
+            child: const Icon(
+              Icons.camera_alt_rounded,
+              color: Color(0xFF00FF88),
+              size: 22,
+            ),
           ),
-        ),
+          const SizedBox(height: 10),
+          // ── Primary FAB: Tambah Catatan ─────────────────────────────────
+          FloatingActionButton.extended(
+            heroTag: 'fab_add_log',
+            elevation: 4,
+            highlightElevation: 8,
+            onPressed: () => _goToEditor(),
+            backgroundColor: const Color(0xFF43A047),
+            icon: const Icon(Icons.add_task, color: Colors.white, size: 22),
+            label: const Text(
+              'Tambah Catatan',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

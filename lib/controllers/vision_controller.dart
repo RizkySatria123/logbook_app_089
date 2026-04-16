@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
-import 'package:flutter/painting.dart';
 import 'package:flutter/widgets.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -24,7 +23,7 @@ enum CameraStatus {
 /// - Meminta izin kamera sebelum inisialisasi
 /// - Menginisialisasi kamera belakang dengan resolusi medium
 /// - Menangani AppLifecycle untuk mencegah memory leak
-class VisionController extends ChangeNotifier implements WidgetsBindingObserver {
+class VisionController extends ChangeNotifier with WidgetsBindingObserver {
   // ─── State ───────────────────────────────────────────────────────────────
 
   CameraController? _cameraController;
@@ -43,6 +42,14 @@ class VisionController extends ChangeNotifier implements WidgetsBindingObserver 
   /// Random number generator untuk menghasilkan bounding box acak.
   final math.Random _random = math.Random();
 
+  // ── Hardware & UI State ───────────────────────────────────────────────────
+
+  /// Status torch/flash saat ini.
+  bool _isTorchOn = false;
+
+  /// Apakah overlay DamagePainter ditampilkan.
+  bool _isOverlayVisible = true;
+
   // ─── Getters ─────────────────────────────────────────────────────────────
 
   CameraController? get cameraController => _cameraController;
@@ -54,6 +61,12 @@ class VisionController extends ChangeNotifier implements WidgetsBindingObserver 
 
   /// Apakah mock detector sedang aktif.
   bool get isDetecting => _mockDetectionTimer?.isActive ?? false;
+
+  /// Status torch (true = menyala).
+  bool get isTorchOn => _isTorchOn;
+
+  /// Apakah overlay painter ditampilkan di atas preview.
+  bool get isOverlayVisible => _isOverlayVisible;
 
   /// Apakah preview kamera siap ditampilkan ke UI.
   bool get isCameraReady =>
@@ -152,8 +165,35 @@ class VisionController extends ChangeNotifier implements WidgetsBindingObserver 
       await _cameraController!.dispose();
       _cameraController = null;
       _currentDetection = null;
+      _isTorchOn = false;
       _setStatus(CameraStatus.disposed);
     }
+  }
+
+  // ─── Hardware Control ─────────────────────────────────────────────────────
+
+  /// Toggle torch (senter) on/off.
+  ///
+  /// Menggunakan [CameraController.setFlashMode] dengan:
+  /// - [FlashMode.torch] → lampu menyala terus (bukan flash sekali)
+  /// - [FlashMode.off]   → lampu mati
+  Future<void> toggleTorch() async {
+    if (!isCameraReady) return;
+    try {
+      final newMode = _isTorchOn ? FlashMode.off : FlashMode.torch;
+      await _cameraController!.setFlashMode(newMode);
+      _isTorchOn = !_isTorchOn;
+      notifyListeners();
+    } on CameraException catch (e) {
+      // Beberapa emulator tidak mendukung torch — abaikan error.
+      debugPrint('toggleTorch error: ${e.code} – ${e.description}');
+    }
+  }
+
+  /// Toggle visibilitas overlay DamagePainter secara real-time.
+  void toggleOverlay() {
+    _isOverlayVisible = !_isOverlayVisible;
+    notifyListeners();
   }
 
   // ─── Mock Detector ────────────────────────────────────────────────────────
