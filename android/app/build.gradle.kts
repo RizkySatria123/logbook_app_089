@@ -22,7 +22,7 @@ android {
     defaultConfig {
         applicationId = "com.example.logbook_app_089"
         // camera plugin membutuhkan minSdk >= 21 (CameraX)
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

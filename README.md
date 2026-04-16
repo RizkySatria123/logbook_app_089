@@ -172,14 +172,59 @@ Pada modul ini, aplikasi melakukan migrasi penyimpanan dari memori lokal menuju 
 - [x] [cite_start]**Informative Empty State:** Menampilkan ilustrasi animasi saat belum ada data, bukan layar putih polos[cite: 2753, 2755].
 - [x] [cite_start]**Categorization & Color Coding:** Membedakan warna *Card* secara otomatis berdasarkan Kategori ("Pekerjaan", "Pribadi", "Urgent") agar mudah dibaca[cite: 2757, 2760].
 
----
-
 
 ### Modul 5: Offline-First & Collaborative
 | Offline Connection Guard | Status Sinkronisasi Online | Markdown Editor & Privacy |
 |:---:|:---:|:---:|
 | ![Offline State](gambar_praktikum/IMG11.jpeg) | ![Online State](gambar_praktikum/IMG12.jpeg) | ![Editor & Markdown](gambar_praktikum/IMG10.jpeg) |
 
+
+## 📂 MODUL 6: Dasar Vision & Interface
+
+Pada modul ini, aplikasi bertransformasi dari sekadar data tekstual menjadi sistem cerdas yang memiliki "indera penglihatan" digital melalui integrasi hardware kamera dan *Advanced UI Layering*.
+
+### 📝 Task 1: Tugas Pendahuluan
+**Fokus:** Pemahaman teoritis arsitektur Vision pada Mobile.
+
+1. **Perbedaan Logical Pixels vs Physical Pixels:**
+   * **Physical Pixels:** Ukuran fisik gambar mentah dari sensor kamera (misal: 1280x720 pada `ResolutionPreset.medium`).
+   * **Logical Pixels:** Sistem ukuran layar yang digunakan Flutter untuk menggambar UI (misal: iPhone 13 memiliki lebar ~390 unit).
+   * **Urgensi:** Output koordinat dari AI (YOLO) biasanya berupa nilai normalisasi (0.0 - 1.0). Pemetaan (*mapping*) ke Logical Pixels wajib dilakukan agar *Bounding Box* presisi menutupi objek di antarmuka aplikasi.
+
+2. **Kritikalitas WidgetsBindingObserver:**
+   Penting untuk manajemen memori berbasis *Lifecycle-Aware*. Sensor kamera adalah hardware yang berat; observer ini memastikan kamera berhenti saat aplikasi masuk ke *background* (misal: saat menerima telepon) untuk mencegah kebocoran memori (*memory leak*).
+
+3. **Tipe Kerusakan Jalan (RDD-2022):**
+   * `D00`: Longitudinal Crack
+   * `D10`: Transverse Crack
+   * `D20`: Alligator Crack
+   * `D40`: Pothole (Lubang Jalan)
+
+### 🚀 Milestone Praktikum
+
+#### Task 2: The Camera Eye (LOTS)
+- [x] **Native Setup:** Konfigurasi `AndroidManifest.xml` dan `minSdkVersion` sesuai standar.
+- [x] **Controller Logic:** Inisialisasi kamera belakang dengan resolusi medium via `VisionController`.
+- [x] **Live Preview:** Aliran video muncul di `VisionView` tanpa distorsi aspek rasio.
+
+#### Task 3: Dynamic Interface Overlay (MOTS)
+- [x] **Static Anchor:** Implementasi `CustomPaint` untuk indikator *crosshair* di tengah layar.
+- [x] **Vision Label:** Teks "Searching for Road Damage..." menggunakan `TextPainter`.
+- [x] **Rigid Positioning:** Overlay tetap presisi di tengah meskipun ukuran layar perangkat berbeda.
+
+#### Task 4: The Mock Detector & Lifecycle Safety (HOTS)
+- [x] **Mock Detection:** Fungsi simulasi yang memindahkan kotak deteksi secara acak setiap 3 detik.
+- [x] **Scaling Calibration:** Kotak deteksi proporsional terhadap lebar layar (menggunakan variabel `Size`).
+- [x] **Resource Guard:** Implementasi *Auto-Dispose* menggunakan `WidgetsBindingObserver`.
+
+---
+
+### ✨ Homework: UX & Portofolio (30%)
+- [x] **Smart Vision Toggle & Flashlight:** Implementasi kontrol lampu *torch* dan switch untuk mengaktifkan/matikan layer overlay.
+- [x] **Informative Vision State:** Feedback visual berupa loading state "Menghubungkan ke Sensor Visual..." dan penanganan izin kamera yang ditolak.
+- [x] **Detection Style:** Skema warna dinamis (Merah untuk Pothole D40, Kuning untuk Crack D00) dengan efek stroke pada teks agar terbaca di berbagai latar jalan.
+
+---
 
 ## 📸 Screenshots
 
@@ -208,6 +253,10 @@ Pada modul ini, aplikasi melakukan migrasi penyimpanan dari memori lokal menuju 
 |:---:|:---:|:---:|
 | ![Offline State](gambar_praktikum/IMG11.jpeg) | ![Online State](gambar_praktikum/IMG12.jpeg) | ![Editor & Markdown](gambar_praktikum/IMG10.jpeg) |
 
+##  Modul 6: Dasar Vision & Interface
+| Menu Utama | Kamera & Vision Interface |
+|:---:|:---:|
+| ![Menu Utama](gambar_praktikum/IMG16.jpeg) | ![Vision Interface](gambar_praktikum/IMG17.jpeg) |
 ---
 ## 🧠 Self Reflection (Lesson Learnt)
 
@@ -233,3 +282,10 @@ Prinsip SRP membuat logika counter dan pencatatan riwayat terpisah di `CounterCo
 1. [cite_start]**Konsep Baru:** Baru tahu dan benar-benar paham tentang konsep arsitektur **Offline-First** dan **Background Sync**[cite: 2857]. [cite_start]Ternyata, membuat aplikasi yang tahan banting saat tidak ada internet itu bukan sekadar menyimpan data di lokal (Hive), tapi bagaimana mengatur logikanya (*fire-and-forget*) agar aplikasi tidak *nge-freeze* saat menunggu respons server, serta bagaimana merancang sensor agar data otomatis terkirim ke Cloud saat internet kembali menyala tanpa interaksi pengguna[cite: 2858].
 2. [cite_start]**Kemenangan Kecil:** Berhasil menjadi "detektif kode" dengan memecahkan *bug* **"The Silent Wipe"** yang bikin pusing karena catatan sempat hilang sendiri dalam 1 detik[cite: 2859]. [cite_start]Sangat memuaskan rasanya ketika sadar bahwa masalahnya ada di fungsi yang me-*return list* kosong saat *offline*, dan berhasil memperbaikinya menggunakan `rethrow`[cite: 2860]. [cite_start]Ditambah lagi, berhasil mengatasi kepanikan saat *error* gagal *upgrade* SDK Flutter di terminal! [cite: 2861]
 3. [cite_start]**Target Berikutnya:** Pengen banget mendalami tentang **Automated Testing** (Pengujian Otomatis) di Modul 6 nanti[cite: 2862]. [cite_start]Setelah mencoba *Privacy Leak Test* di akhir tugas ini, rasanya sangat melegakan dan memuaskan melihat centang hijau *"All tests passed!"* di terminal[cite: 2863]. [cite_start]Jadi makin penasaran bagaimana cara membuat *test case* yang lebih kompleks untuk menguji keamanan dan fungsionalitas fitur-fitur lainnya[cite: 2864].
+### Modul 6
+1. **Konsep Baru (CustomPainter):**
+   Baru menyadari bahwa `CustomPainter` tidak otomatis *repaint* di setiap frame. Kita harus mengatur agar `shouldRepaint()` mengembalikan nilai `true` saat data deteksi berubah. Jika tidak, *bounding box* akan terlihat statis meskipun data koordinat sudah diperbarui.
+2. **Kemenangan Kecil (Built-in Flashlight):**
+   Berhasil mengimplementasikan `toggleTorch()` menggunakan `FlashMode.torch`. Awalnya mengira butuh plugin tambahan, ternyata sudah tersedia di `camera` package. Memahami perbedaan antara mode `torch` (nyala terus saat preview) dan `always` (nyala saat capture).
+3. **Target Berikutnya:**
+   Mengintegrasikan model asli YOLO (`.tflite`) untuk menggantikan *mock detector*, serta mendalami preprocessing format `CameraImage` menjadi `TensorBuffer` untuk proses inferensi.
