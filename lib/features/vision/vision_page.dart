@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,6 +32,9 @@ class _VisionPageState extends State<VisionPage>
   // Animasi pulse untuk indikator scanning
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseAnim;
+
+  // State untuk feedback tombol potret
+  bool _isCapturing = false;
 
   @override
   void initState() {
@@ -345,21 +350,21 @@ class _VisionPageState extends State<VisionPage>
   Widget _buildCameraPreview(VisionController ctrl) {
     if (!ctrl.isCameraReady) return const SizedBox.shrink();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final previewSize = ctrl.cameraController!.value.previewSize!;
-        final double previewAspect = previewSize.height / previewSize.width;
+    final cameraController = ctrl.cameraController!;
 
-        return Transform.scale(
-          scale: (constraints.maxHeight / constraints.maxWidth) / previewAspect,
-          child: Center(
-            child: AspectRatio(
-              aspectRatio: 1 / previewAspect,
-              child: CameraPreview(ctrl.cameraController!),
-            ),
-          ),
-        );
-      },
+    return SizedBox.expand(
+      child: FittedBox(
+        // BoxFit.cover: preview mengisi seluruh layar tanpa distorsi (crop sisi).
+        // previewSize.height = lebar frame landscape (= lebar portrait).
+        // previewSize.width  = tinggi frame landscape (= tinggi portrait).
+        fit: BoxFit.cover,
+        alignment: Alignment.center,
+        child: SizedBox(
+          width: cameraController.value.previewSize!.height,
+          height: cameraController.value.previewSize!.width,
+          child: CameraPreview(cameraController),
+        ),
+      ),
     );
   }
 
@@ -514,37 +519,118 @@ class _VisionPageState extends State<VisionPage>
     );
   }
 
-  /// Tombol shutter bulat besar di tengah — trigger mock detection manual.
+  /// Tombol shutter bulat besar di tengah — ambil foto nyata dari kamera.
   Widget _buildShutterButton(VisionController ctrl) {
+    final bool canCapture = ctrl.isCameraReady && !_isCapturing;
+
     return GestureDetector(
-      onTap: ctrl.isCameraReady
-          ? () {
-              // Langsung panggil ulang mock detection saat diketuk
-              // (simulasi "ambil gambar dan deteksi").
-              ctrl.initCamera(); // no-op jika sudah ready — aman
-            }
-          : null,
-      child: Container(
+      onTap: canCapture ? _handleCapture : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
         width: 72,
         height: 72,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
-            color: const Color(0xFF00FF88),
+            color: _isCapturing
+                ? const Color(0xFFFFCC00)
+                : const Color(0xFF00FF88),
             width: 3,
           ),
         ),
-        child: Container(
-          margin: const EdgeInsets.all(6),
-          decoration: const BoxDecoration(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          margin: EdgeInsets.all(_isCapturing ? 10 : 6),
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Color(0xFF00FF88),
+            color: _isCapturing
+                ? const Color(0xFFFFCC00)
+                : const Color(0xFF00FF88),
           ),
-          child: const Icon(
-            Icons.camera_alt_rounded,
+          child: Icon(
+            _isCapturing ? Icons.hourglass_top_rounded : Icons.camera_alt_rounded,
             color: Colors.black,
             size: 28,
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Eksekusi pengambilan foto menggunakan [CameraController.takePicture].
+  Future<void> _handleCapture() async {
+    if (_isCapturing || !_ctrl.isCameraReady) return;
+
+    setState(() => _isCapturing = true);
+
+    try {
+      // Ambil foto — hasilnya berupa XFile di storage sementara.
+      final XFile photo = await _ctrl.cameraController!.takePicture();
+
+      if (!mounted) return;
+
+      setState(() {
+        _isCapturing = false;
+      });
+
+      // Tampilkan snackbar konfirmasi dengan path file.
+      _showCaptureSnackbar(photo.path);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isCapturing = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mengambil foto: $e'),
+          backgroundColor: const Color(0xFFFF3B30),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  /// Tampilkan snackbar kecil di bawah layar saat foto berhasil diambil.
+  void _showCaptureSnackbar(String filePath) {
+    final file = File(filePath);
+    final fileName = file.path.split('/').last.split('\\').last;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        margin: const EdgeInsets.only(bottom: 140, left: 16, right: 16),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.black.withAlpha(210),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFF00FF88), width: 1),
+        ),
+        duration: const Duration(seconds: 3),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded,
+                color: Color(0xFF00FF88), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Foto berhasil diambil!',
+                    style: TextStyle(
+                        color: Color(0xFF00FF88),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13),
+                  ),
+                  Text(
+                    fileName,
+                    style: TextStyle(
+                        color: Colors.white.withAlpha(160), fontSize: 11),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
