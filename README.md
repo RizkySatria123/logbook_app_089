@@ -253,9 +253,10 @@ Pada modul ini, aplikasi bertransformasi dari sekadar data tekstual menjadi sist
 |:---:|:---:|:---:|
 | ![Offline State](gambar_praktikum/IMG11.jpeg) | ![Online State](gambar_praktikum/IMG12.jpeg) | ![Editor & Markdown](gambar_praktikum/IMG10.jpeg) |
 
-##  Modul 6: Dasar Vision & Interface
+## Modul 6: Dasar Vision & Interface
+
 | Menu Utama | Kamera & Vision Interface |
-|:---:|:---:|
+| :---: | :---: |
 | ![Menu Utama](gambar_praktikum/IMG16.jpeg) | ![Vision Interface](gambar_praktikum/IMG17.jpeg) | ![PCD Menu](gambar_praktikum/IMG18.jpeg) | ![PCD Editor](gambar_praktikum/IMG19.jpeg) | ![PCD Editor](gambar_praktikum/IMG20.jpeg) |
 ---
 ## 🧠 Self Reflection (Lesson Learnt)
