@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/vision_controller.dart';
 import '../../painters/damage_painter.dart';
+import 'pcd_editor_page.dart';
 
 /// [VisionPage] — Halaman utama deteksi kerusakan jalan (RDD-2022).
 ///
@@ -557,24 +556,27 @@ class _VisionPageState extends State<VisionPage>
     );
   }
 
-  /// Eksekusi pengambilan foto menggunakan [CameraController.takePicture].
+  /// Eksekusi pengambilan foto menggunakan [CameraController.takePicture],
+  /// lalu langsung membuka [PcdEditorPage] untuk analisis citra.
   Future<void> _handleCapture() async {
     if (_isCapturing || !_ctrl.isCameraReady) return;
 
     setState(() => _isCapturing = true);
 
     try {
-      // Ambil foto — hasilnya berupa XFile di storage sementara.
+      // Hentikan mock detector sementara agar tidak mengganggu preview.
       final XFile photo = await _ctrl.cameraController!.takePicture();
 
       if (!mounted) return;
+      setState(() => _isCapturing = false);
 
-      setState(() {
-        _isCapturing = false;
-      });
-
-      // Tampilkan snackbar konfirmasi dengan path file.
-      _showCaptureSnackbar(photo.path);
+      // Buka halaman PCD Editor dengan gambar yang baru ditangkap.
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PcdEditorPage(imagePath: photo.path),
+          fullscreenDialog: true,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isCapturing = false);
@@ -583,57 +585,12 @@ class _VisionPageState extends State<VisionPage>
         SnackBar(
           content: Text('Gagal mengambil foto: $e'),
           backgroundColor: const Color(0xFFFF3B30),
-          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     }
-  }
-
-  /// Tampilkan snackbar kecil di bawah layar saat foto berhasil diambil.
-  void _showCaptureSnackbar(String filePath) {
-    final file = File(filePath);
-    final fileName = file.path.split('/').last.split('\\').last;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        margin: const EdgeInsets.only(bottom: 140, left: 16, right: 16),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.black.withAlpha(210),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: Color(0xFF00FF88), width: 1),
-        ),
-        duration: const Duration(seconds: 3),
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_rounded,
-                color: Color(0xFF00FF88), size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Foto berhasil diambil!',
-                    style: TextStyle(
-                        color: Color(0xFF00FF88),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13),
-                  ),
-                  Text(
-                    fileName,
-                    style: TextStyle(
-                        color: Colors.white.withAlpha(160), fontSize: 11),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   /// Tombol toggle overlay HUD.
