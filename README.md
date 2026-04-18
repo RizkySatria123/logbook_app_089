@@ -257,7 +257,7 @@ Pada modul ini, aplikasi bertransformasi dari sekadar data tekstual menjadi sist
 
 | Menu Utama | Kamera & Vision Interface |
 | :---: | :---: |
-| ![Menu Utama](gambar_praktikum/IMG16.jpeg) | ![Vision Interface](gambar_praktikum/IMG17.jpeg) | ![PCD Menu](gambar_praktikum/IMG18.jpeg) | ![PCD Editor](gambar_praktikum/IMG19.jpeg) | ![PCD Editor](gambar_praktikum/IMG20.jpeg) |
+| ![PCD Menu](gambar_praktikum/IMG18.jpeg) | ![Vision Interface](gambar_praktikum/IMG17.jpeg) | 
 ---
 ## 🧠 Self Reflection (Lesson Learnt)
 
